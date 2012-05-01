@@ -1,0 +1,20 @@
+/* 
+ * AGS project (based on gold-miners example)
+ */
+
+MAS miners {
+    infrastructure: Centralised
+	
+    environment: mining.MiningPlanet(3,0,yes)
+        // parameters: 1. environment configuration id (from 1 to 3)
+        //             2. sleep time (in ms) after each action
+        //             3. whether display the gui
+	    
+	agents:
+		aSlow teamGSlow;
+		aMiddle teamGMiddle;
+		aFast teamGFast;
+		bSlow teamySlow;
+		bMiddle teamyMiddle;
+		bFast teamyFast;
+}
