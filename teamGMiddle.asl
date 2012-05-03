@@ -18,6 +18,25 @@ complement_x_dir(none, left).
 complement_y_dir(up, down).
 complement_y_dir(down, up).
 complement_y_dir(none, down).
+	
+get_x_dir(MyX, TargetX, right) :- TargetX > MyX.
+get_x_dir(MyX, TargetX, left) :- TargetX < MyX.
+get_x_dir(MyX, TargetX, none) :- TargetX == MyX.
+get_y_dir(MyY, TargetY, up) :- TargetY < MyY.
+get_y_dir(MyY, TargetY, down) :- TargetY > MyY.
+get_y_dir(MyY, TargetY, none) :- TargetY == MyY.
+
+first([H|T], H).
+second([H|T], HH) :- first(T, HH).
+
+goto_plan([[2,2], [20,13], [5,5]]).
+empty_goto_plan :- goto_plan([]).
+get_first_position(X,Y) :- goto_plan([H|T]) & first(H, X) & second(H, Y).
+
++!pop_first_position
+    <- ?goto_plan([H|T]);
+	   -goto_plan(_);
+	   +goto_plan(T).
 
 +!change_complement_x_dir
     <- ?complement_x_dir(none, X);
@@ -30,14 +49,6 @@ complement_y_dir(none, down).
 	   ?complement_y_dir(Y, CompY);
 	   -complement_y_dir(none, _);
 	   +complement_y_dir(none, CompY).
-	
-get_x_dir(MyX, TargetX, right) :- TargetX > MyX.
-get_x_dir(MyX, TargetX, left) :- TargetX < MyX.
-get_x_dir(MyX, TargetX, none) :- TargetX == MyX.
-get_y_dir(MyY, TargetY, up) :- TargetY < MyY.
-get_y_dir(MyY, TargetY, down) :- TargetY > MyY.
-get_y_dir(MyY, TargetY, none) :- TargetY == MyY.
-
 
 +!reset_solving_obstacle <- -solving_obstacle(_,_).
 
@@ -110,21 +121,26 @@ get_y_dir(MyY, TargetY, none) :- TargetY == MyY.
 		   }
 	   }.
 
++!goto_next_position
+    <- if(not empty_goto_plan) {
+	       ?get_first_position(X,Y);
+		   // pokud jsem uz na te pozici, tak jedu dal
+		   if (pos(X,Y)) {
+		       !pop_first_position;
+			   !goto_next_position
+		   }
+		   else {
+		       !goto(X,Y)
+		   }
+	   }.
+	   
 +!do_step : moves_left(M) & (M > 1) 
-      <- !goto(18,18); 
+      <- !goto_next_position;
 		 !do_step.
 
 +!do_step : moves_left(M) & M == 1
-      <- !goto(18,18). 
+      <- !goto_next_position.
 
-/*
-+!do_step : moves_left(M) & (M > 1) 
-      <- ?depot(X,Y); !goto(X,Y); //!seek 
-		 !do_step.
-
-+!do_step : moves_left(M) & M == 1
-      <- ?depot(X,Y); !goto(X,Y). //!seek 
-*/
 +step(X) <- !do_step.
 
 
