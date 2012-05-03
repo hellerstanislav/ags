@@ -26,12 +26,19 @@ get_y_dir(MyY, TargetY, up) :- TargetY < MyY.
 get_y_dir(MyY, TargetY, down) :- TargetY > MyY.
 get_y_dir(MyY, TargetY, none) :- TargetY == MyY.
 
+//primitiva
 first([H|T], H).
 second([H|T], HH) :- first(T, HH).
+between(X, From, To) :- From < To & X > From & X < To.
+between(X, From, To) :- From > To & X < From & X > To.
 
 goto_plan([[2,2], [20,13], [5,5]]).
 empty_goto_plan :- goto_plan([]).
 get_first_position(X,Y) :- goto_plan([H|T]) & first(H, X) & second(H, Y).
+
++!add_obstacles : obstacle(X,Y)
+    <- +known_obstacle(X,Y).
++!add_obstacles <- true.
 
 +!pop_first_position
     <- ?goto_plan([H|T]);
@@ -50,11 +57,13 @@ get_first_position(X,Y) :- goto_plan([H|T]) & first(H, X) & second(H, Y).
 	   -complement_y_dir(none, _);
 	   +complement_y_dir(none, CompY).
 
+// zruseni faktu, ze obchazim prekazku
 +!reset_solving_obstacle <- -solving_obstacle(_,_).
 
 // pokud uz tam jsi, nikam nechod
 +!goto(X,Y) : pos(X,Y) <- true.
 
+// obchazim prekazku
 +!goto(X,Y) : solving_obstacle(TargetDir, SolvingDir)
     <- if (possible(TargetDir)) {
 	       !reset_solving_obstacle;
@@ -69,6 +78,7 @@ get_first_position(X,Y) :- goto_plan([H|T]) & first(H, X) & second(H, Y).
 		   }
 	   }.
 
+// jdu normalne za cilem po x-ove ose
 +!goto(X,Y) : pos(MyX, MyY) & get_x_dir(MyX, X, Xdir) & not (Xdir == none)
     <- if (possible(Xdir)) {
 	       do(Xdir)
@@ -141,6 +151,8 @@ get_first_position(X,Y) :- goto_plan([H|T]) & first(H, X) & second(H, Y).
 +!do_step : moves_left(M) & M == 1
       <- !goto_next_position.
 
-+step(X) <- !do_step.
++step(X)
+    <- !add_obstacles;
+	   !do_step.
 
 
