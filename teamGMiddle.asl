@@ -289,7 +289,8 @@ min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
 		   }
 	   }
 	   else {
-	       !plan_nearest_unvisited
+	       !plan_nearest_unvisited;
+		   !goto_next_position
 	   }.
 
 // dela kroky dokud v danem kole muze
