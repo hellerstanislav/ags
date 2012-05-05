@@ -1,4 +1,9 @@
 
+unvisited(29,29).
+unvisited(20,15).
+unvisited(27,16).
+
+
 border(X,-1).
 border(-1,Y).
 border(X,Y) :- grid_size(X,_).
@@ -34,21 +39,28 @@ get_y_dir(MyY, TargetY, none) :- TargetY == MyY.
 //primitiva
 first([H|T], H).
 second([H|T], HH) :- first(T, HH).
-
+// pridani prvku na zacatek seznamu
+prepend(H,[], [H]).
+prepend(H,L, [H|L]).
+// test, zda X lezi v intervalu (From,To)
 between(X, From, To) :- From < To & X > From & X < To.
 between(X, From, To) :- From > To & X < From & X > To.
-
+// vzdalenost mezi dvema body v 1D
 euler_dist(A,B,Dist) :- A > B & Dist = A - B.
 euler_dist(A,B,Dist) :- A < B & Dist = B - A.
 euler_dist(A,B,0) :- A=B.
 
-goto_plan([[2,2],[33,14],[0,20],[15,14]]).
+// GOTO PLAN //
+//goto_plan([[2,2],[33,14],[0,20],[15,14]]).
+goto_plan([[X,Y]]) :- depot(X,Y). // nejdrive jed k depotu
 empty_goto_plan :- goto_plan([]).
 get_first_position(X,Y) :- goto_plan([H|T]) & first(H, X) & second(H, Y).
 
+// Zjistovani, jestli mezi dvema body na jedne souradnici lezi prekazka
 obstacle_on_x_path(X1,X2,Y) :- known_obstacle(Xobs, Y) & between(Xobs, X1, X2).
 obstacle_on_y_path(Y1,Y2,X) :-known_obstacle(X, Yobs) & between(Yobs, Y1, Y2).
 
+// zjistovani vzdalenosti mezi dvema body na stejne souradnici
 distance_x_line(X1, X2, Y, Dist) :- obstacle_on_x_path(X1,X2,Y) & 
                                     euler_dist(X1,X2,D) & 
 								    Dist = D + 3.
@@ -58,15 +70,62 @@ distance_y_line(Y1, Y2, X, Dist) :- obstacle_on_y_path(Y1,Y2,X) &
 									Dist = D + 3.
 distance_y_line(Y1, Y2, X, Dist) :- euler_dist(Y1,Y2,Dist).
 
-prepend(H,[], [H]).
-prepend(H,L, [H|L]).
 
-// SMAZAT!!
-//!plan_best_path(2,2).
-//!plan_best_path(20,13).
-!plan_best_path(9,26).
-//!plan_best_path(33,14).
 
+// zjistovani vzdalenosti mezi dvema libovolnymi body
+//distance(X1,Y1,X2,Y2,0).
+
+distance(MyX,MyY,X,Y,Dist) :- pos(MyX,MyY) &
+                              distance_x_line(MyX, X, Y, Dist_Y) &
+							  distance_x_line(MyX, X, MyY, Dist_MyY) &
+							  distance_y_line(MyY, Y, X, Dist_X) &
+							  distance_y_line(MyY, Y, MyX, Dist_MyX) &
+							  A = Dist_MyX + Dist_Y &
+							  B = Dist_MyY + Dist_X &
+							  .min([A,B],Dist).
+
+// predikat pro zjisteni, jestli bod (X,Y) lezi na hraci plose
+on_board(X,Y) :- grid_size(GX,GY) & between(X,-1,GX+1) & between(Y, -1, GY+1).
+
+
+// zjisteni vsech bodu, ktere jsou aktualne od agenta nejblize
+min_distance(Unvisited,UnvisitedMinDistList) :-
+    min_distance_worker(Unvisited,1000,[],UnvisitedMinDistList).
+
+min_distance_worker([],_,K,K).
+
+min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
+    pos(PosX,PosY) & first(H,Xtarget) & second(H,Ytarget) &
+    distance(PosX,PosY,Xtarget,Ytarget,Dist) &
+	Dist < MinDist &
+	min_distance_worker(T,Dist,[H],UnvisitedMinDistList).
+
+min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
+    pos(PosX,PosY) & first(H,Xtarget) & second(H,Ytarget) &
+    distance(PosX,PosY,Xtarget,Ytarget,Dist) &
+	Dist = MinDist & .concat([H],Keeper,NewKeeper) & 
+	min_distance_worker(T,Dist,NewKeeper,UnvisitedMinDistList).
+
+min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
+    pos(PosX,PosY) & first(H,Xtarget) & second(H,Ytarget) &
+    distance(PosX,PosY,Xtarget,Ytarget,Dist) &
+	Dist > MinDist &
+	min_distance_worker(T,MinDist,Keeper,UnvisitedMinDistList).
+
+
+// pomocny rekurzivni srotovac pro naplanovani vsech bodu z listu UnvisitedMinDistList
++!plan_nearest_unvisited_worker([]) <- true.	   
++!plan_nearest_unvisited_worker([H|T])
+    <- ?first(H,X);?second(H,Y);
+	   !plan_best_path(X,Y);
+	   !plan_nearest_unvisited_worker(T).
+	   
+// prida do planu nejblizsi nenavstivene body na mape
++!plan_nearest_unvisited
+    <- .findall([X,Y], unvisited(X,Y), Unvisited);
+	   ?min_distance(Unvisited,UnvisitedMinDistList);
+	   !plan_nearest_unvisited_worker(UnvisitedMinDistList).
+	   
 // prida bod na zacatek planu
 +!prepend_to_goto_plan(X,Y)
     <- ?goto_plan(G);
@@ -94,7 +153,7 @@ prepend(H,L, [H|L]).
 
 // pridani vsech viditelnych prekazek do databaze znalosti agenta
 +!add_obstacles : obstacle(X,Y)
-    <- +known_obstacle(X,Y).
+    <- +known_obstacle(X,Y); -unvisited(X,Y).
 +!add_obstacles <- true.
 
 // odstrani prvni prvek z goto planu
@@ -214,8 +273,11 @@ prepend(H,L, [H|L]).
 	   }.
 
 // udela jeden krok k prvni naplanovane pozici
-+!goto_next_position
-    <- if(not empty_goto_plan) {
+// pokud nejsou zadne naplanovane pozice, jde tam, kde jeste nebyl
++!goto_next_position : pos(MyX,MyY)
+    <- // zaznamenam, si, kde jsem
+	   -unvisited(MyX,MyY);
+	   if(not empty_goto_plan) {
 	       ?get_first_position(X,Y);
 		   // pokud jsem uz na te pozici, tak jedu dal
 		   if (pos(X,Y)) {
@@ -225,6 +287,9 @@ prepend(H,L, [H|L]).
 		   else {
 		       !goto(X,Y)
 		   }
+	   }
+	   else {
+	       !plan_nearest_unvisited
 	   }.
 
 // dela kroky dokud v danem kole muze
