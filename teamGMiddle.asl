@@ -1,8 +1,328 @@
 
-unvisited(29,29).
-unvisited(20,15).
-unvisited(27,16).
-
+unvisited(0,0).
+unvisited(0,2).
+unvisited(0,4).
+unvisited(0,6).
+unvisited(0,8).
+unvisited(0,10).
+unvisited(0,12).
+unvisited(0,14).                                                                                     
+unvisited(0,16).                                                                                     
+unvisited(0,18).                                                                                     
+unvisited(0,20).                                                                                     
+unvisited(0,22).                                                                                     
+unvisited(0,24).                                                                                     
+unvisited(0,26).                                                                                     
+unvisited(0,28).                                                                                     
+unvisited(0,30).                                                                                     
+unvisited(0,32).                                                                                     
+unvisited(0,34).                                                                                     
+unvisited(2,0).                                                                                      
+unvisited(2,2).                                                                                      
+unvisited(2,4).
+unvisited(2,6).
+unvisited(2,8).
+unvisited(2,10).
+unvisited(2,12).
+unvisited(2,14).
+unvisited(2,16).
+unvisited(2,18).
+unvisited(2,20).
+unvisited(2,22).
+unvisited(2,24).
+unvisited(2,26).
+unvisited(2,28).
+unvisited(2,30).
+unvisited(2,32).
+unvisited(2,34).
+unvisited(4,0).
+unvisited(4,2).
+unvisited(4,4).
+unvisited(4,6).
+unvisited(4,8).
+unvisited(4,10).
+unvisited(4,12).
+unvisited(4,14).
+unvisited(4,16).
+unvisited(4,18).
+unvisited(4,20).
+unvisited(4,22).
+unvisited(4,24).
+unvisited(4,26).
+unvisited(4,28).
+unvisited(4,30).
+unvisited(4,32).
+unvisited(4,34).
+unvisited(6,0).
+unvisited(6,2).
+unvisited(6,4).
+unvisited(6,6).
+unvisited(6,8).
+unvisited(6,10).
+unvisited(6,12).
+unvisited(6,14).
+unvisited(6,16).
+unvisited(6,18).
+unvisited(6,20).
+unvisited(6,22).
+unvisited(6,24).
+unvisited(6,26).
+unvisited(6,28).
+unvisited(6,30).
+unvisited(6,32).
+unvisited(6,34).
+unvisited(8,0).
+unvisited(8,2).
+unvisited(8,4).
+unvisited(8,6).
+unvisited(8,8).
+unvisited(8,10).
+unvisited(8,12).
+unvisited(8,14).
+unvisited(8,16).
+unvisited(8,18).
+unvisited(8,20).
+unvisited(8,22).
+unvisited(8,24).
+unvisited(8,26).
+unvisited(8,28).
+unvisited(8,30).
+unvisited(8,32).
+unvisited(8,34).
+unvisited(10,0).
+unvisited(10,2).
+unvisited(10,4).
+unvisited(10,6).
+unvisited(10,8).
+unvisited(10,10).
+unvisited(10,12).
+unvisited(10,14).
+unvisited(10,16).
+unvisited(10,18).
+unvisited(10,20).
+unvisited(10,22).
+unvisited(10,24).
+unvisited(10,26).
+unvisited(10,28).
+unvisited(10,30).
+unvisited(10,32).
+unvisited(10,34).
+unvisited(12,0).
+unvisited(12,2).
+unvisited(12,4).
+unvisited(12,6).
+unvisited(12,8).
+unvisited(12,10).
+unvisited(12,12).
+unvisited(12,14).
+unvisited(12,16).
+unvisited(12,18).
+unvisited(12,20).
+unvisited(12,22).
+unvisited(12,24).
+unvisited(12,26).
+unvisited(12,28).
+unvisited(12,30).
+unvisited(12,32).
+unvisited(12,34).
+unvisited(14,0).
+unvisited(14,2).
+unvisited(14,4).
+unvisited(14,6).
+unvisited(14,8).
+unvisited(14,10).
+unvisited(14,12).
+unvisited(14,14).
+unvisited(14,16).
+unvisited(14,18).
+unvisited(14,20).
+unvisited(14,22).
+unvisited(14,24).
+unvisited(14,26).
+unvisited(14,28).
+unvisited(14,30).
+unvisited(14,32).
+unvisited(14,34).
+unvisited(16,0).
+unvisited(16,2).
+unvisited(16,4).
+unvisited(16,6).
+unvisited(16,8).
+unvisited(16,10).
+unvisited(16,12).
+unvisited(16,14).
+unvisited(16,16).
+unvisited(16,18).
+unvisited(16,20).
+unvisited(16,22).
+unvisited(16,24).
+unvisited(16,26).
+unvisited(16,28).
+unvisited(16,30).
+unvisited(16,32).
+unvisited(16,34).
+unvisited(18,0).
+unvisited(18,2).
+unvisited(18,4).
+unvisited(18,6).
+unvisited(18,8).
+unvisited(18,10).
+unvisited(18,12).
+unvisited(18,14).
+unvisited(18,16).
+unvisited(18,18).
+unvisited(18,20).
+unvisited(18,22).
+unvisited(18,24).
+unvisited(18,26).
+unvisited(18,28).
+unvisited(18,30).
+unvisited(18,32).
+unvisited(18,34).
+unvisited(20,0).
+unvisited(20,2).
+unvisited(20,4).
+unvisited(20,6).
+unvisited(20,8).
+unvisited(20,10).
+unvisited(20,12).
+unvisited(20,14).
+unvisited(20,16).
+unvisited(20,18).
+unvisited(20,20).
+unvisited(20,22).
+unvisited(20,24).
+unvisited(20,26).
+unvisited(20,28).
+unvisited(20,30).
+unvisited(20,32).
+unvisited(20,34).
+unvisited(22,0).
+unvisited(22,2).
+unvisited(22,4).
+unvisited(22,6).
+unvisited(22,8).
+unvisited(22,10).
+unvisited(22,12).
+unvisited(22,14).
+unvisited(22,16).
+unvisited(22,18).
+unvisited(22,20).
+unvisited(22,22).
+unvisited(22,24).
+unvisited(22,26).
+unvisited(22,28).
+unvisited(22,30).
+unvisited(22,32).
+unvisited(22,34).
+unvisited(24,0).
+unvisited(24,2).
+unvisited(24,4).
+unvisited(24,6).
+unvisited(24,8).
+unvisited(24,10).
+unvisited(24,12).
+unvisited(24,14).
+unvisited(24,16).
+unvisited(24,18).
+unvisited(24,20).
+unvisited(24,22).
+unvisited(24,24).
+unvisited(24,26).
+unvisited(24,28).
+unvisited(24,30).
+unvisited(24,32).
+unvisited(24,34).
+unvisited(26,0).
+unvisited(26,2).
+unvisited(26,4).
+unvisited(26,6).
+unvisited(26,8).
+unvisited(26,10).
+unvisited(26,12).
+unvisited(26,14).
+unvisited(26,16).
+unvisited(26,18).
+unvisited(26,20).
+unvisited(26,22).
+unvisited(26,24).
+unvisited(26,26).
+unvisited(26,28).
+unvisited(26,30).
+unvisited(26,32).
+unvisited(26,34).
+unvisited(28,0).
+unvisited(28,2).
+unvisited(28,4).
+unvisited(28,6).
+unvisited(28,8).
+unvisited(28,10).
+unvisited(28,12).
+unvisited(28,14).
+unvisited(28,16).
+unvisited(28,18).
+unvisited(28,20).
+unvisited(28,22).
+unvisited(28,24).
+unvisited(28,26).
+unvisited(28,28).
+unvisited(28,30).
+unvisited(28,32).
+unvisited(28,34).
+unvisited(30,0).
+unvisited(30,2).
+unvisited(30,4).
+unvisited(30,6).
+unvisited(30,8).
+unvisited(30,10).
+unvisited(30,12).
+unvisited(30,14).
+unvisited(30,16).
+unvisited(30,18).
+unvisited(30,20).
+unvisited(30,22).
+unvisited(30,24).
+unvisited(30,26).
+unvisited(30,28).
+unvisited(30,30).
+unvisited(30,32).
+unvisited(30,34).
+unvisited(32,0).
+unvisited(32,2).
+unvisited(32,4).
+unvisited(32,6).
+unvisited(32,8).
+unvisited(32,10).
+unvisited(32,12).
+unvisited(32,14).
+unvisited(32,16).
+unvisited(32,18).
+unvisited(32,20).
+unvisited(32,22).
+unvisited(32,24).
+unvisited(32,26).
+unvisited(32,28).
+unvisited(32,30).
+unvisited(32,32).
+unvisited(32,34).
+unvisited(34,0).
+unvisited(34,2).
+unvisited(34,4).
+unvisited(34,6).
+unvisited(34,8).
+unvisited(34,10).
+unvisited(34,12).
+unvisited(34,14).
+unvisited(34,16).
+unvisited(34,18).
+unvisited(34,20).
+unvisited(34,22).
+unvisited(34,24).
+unvisited(34,26).
+unvisited(34,28).
+unvisited(34,30).
+unvisited(34,32).
+unvisited(34,34).
 
 border(X,-1).
 border(-1,Y).
@@ -50,8 +370,7 @@ euler_dist(A,B,Dist) :- A > B & Dist = A - B.
 euler_dist(A,B,Dist) :- A < B & Dist = B - A.
 euler_dist(A,B,0) :- A=B.
 
-// GOTO PLAN //
-//goto_plan([[2,2],[33,14],[0,20],[15,14]]).
+// GOTO PLAN - nejdrive jede k depotu, pak krouzi kolem nej
 goto_plan([[X,Y]]) :- depot(X,Y). // nejdrive jed k depotu
 empty_goto_plan :- goto_plan([]).
 get_first_position(X,Y) :- goto_plan([H|T]) & first(H, X) & second(H, Y).
@@ -95,18 +414,21 @@ min_distance(Unvisited,UnvisitedMinDistList) :-
 min_distance_worker([],_,K,K).
 
 min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
+    //.print(Keeper) &
     pos(PosX,PosY) & first(H,Xtarget) & second(H,Ytarget) &
     distance(PosX,PosY,Xtarget,Ytarget,Dist) &
 	Dist < MinDist &
 	min_distance_worker(T,Dist,[H],UnvisitedMinDistList).
 
 min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
+    //.print(Keeper) &
     pos(PosX,PosY) & first(H,Xtarget) & second(H,Ytarget) &
     distance(PosX,PosY,Xtarget,Ytarget,Dist) &
 	Dist = MinDist & .concat([H],Keeper,NewKeeper) & 
 	min_distance_worker(T,Dist,NewKeeper,UnvisitedMinDistList).
 
 min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
+    //.print(Keeper) &
     pos(PosX,PosY) & first(H,Xtarget) & second(H,Ytarget) &
     distance(PosX,PosY,Xtarget,Ytarget,Dist) &
 	Dist > MinDist &
@@ -116,7 +438,7 @@ min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
 // pomocny rekurzivni srotovac pro naplanovani vsech bodu z listu UnvisitedMinDistList
 +!plan_nearest_unvisited_worker([]) <- true.	   
 +!plan_nearest_unvisited_worker([H|T])
-    <- ?first(H,X);?second(H,Y);
+    <- ?first(H,X); ?second(H,Y);
 	   !plan_best_path(X,Y);
 	   !plan_nearest_unvisited_worker(T).
 	   
@@ -152,9 +474,18 @@ min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
 	   }.
 
 // pridani vsech viditelnych prekazek do databaze znalosti agenta
-+!add_obstacles : obstacle(X,Y)
-    <- +known_obstacle(X,Y); -unvisited(X,Y).
-+!add_obstacles <- true.
+//+!add_obstacles : obstacle(X,Y)
+//    <- +known_obstacle(X,Y); -unvisited(X,Y).
++!add_obstacles
+    <- .findall([X,Y], obstacle(X,Y), VisibleObstacles);
+	    !add_obstacles_worker(VisibleObstacles).
+
++!add_obstacles_worker([]) <- true.
++!add_obstacles_worker([H|T])
+    <- ?first(H,X); ?second(H,Y); // ziskani souradnic
+	   .print("Mam prekazku na [", X, ",", Y, "]");
+	   +known_obstacle(X,Y); -unvisited(X,Y); // zapsani prekazky do db
+	   !add_obstacles_worker(T).
 
 // odstrani prvni prvek z goto planu
 +!pop_first_position
@@ -277,11 +608,20 @@ min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
 +!goto_next_position : pos(MyX,MyY)
     <- // zaznamenam, si, kde jsem
 	   -unvisited(MyX,MyY);
+	   // pridej vsechny prekazky o kterych vis toto kolo
+	   !add_obstacles;
+	   // pokud nemas prazdny plan, tak jedem
 	   if(not empty_goto_plan) {
+	       // ziskani prvni pozice z planu, kam se ma jet
 	       ?get_first_position(X,Y);
-		   // pokud jsem uz na te pozici, tak jedu dal
-		   if (pos(X,Y)) {
+		   
+		   // Pokud je tam prekazka (tzn pozice byla naplanovana pred tim, nez
+		   // jsem uvidel, ze tam je prekazka), tak tam nejedu a pokracuju dal.
+		   // Pokud uz na naplanovane pozici stojim, tak samozrejme jedu na dalsi
+		   if (pos(X,Y) | known_obstacle(X,Y)) {
+		       // odstraneni prvniho prvku v goto planu
 		       !pop_first_position;
+			   // rekurzivne se zavola sam na sebe (jede na dalsi prvek v goto planu)
 			   !goto_next_position
 		   }
 		   else {
@@ -302,7 +642,6 @@ min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
       <- !goto_next_position.
 
 +step(X)
-    <- !add_obstacles;
-	   !do_step.
+    <- !do_step.
 
 
