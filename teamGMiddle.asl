@@ -19,6 +19,23 @@ complement_y_dir(up, down).
 complement_y_dir(down, up).
 complement_y_dir(none, down).
 
+complement_dir(left, right).
+complement_dir(right, left).
+complement_dir(up, down).
+complement_dir(down, up).
+
+solving_pos_score(X,Y,0) :- .count(solving_position(X,Y,_),0).
+solving_pos_score(X,Y,Score) :- solving_position(X,Y,Score).
+
+solving_dir_score(right,Score) :- pos(X,Y) & possible(right) & solving_pos_score(X+1,Y,Score).
+solving_dir_score(right,1000).
+solving_dir_score(up,Score) :- pos(X,Y) & possible(up) & solving_pos_score(X,Y-1,Score).
+solving_dir_score(up,1000).
+solving_dir_score(left,Score) :- pos(X,Y) & possible(left) & solving_pos_score(X-1,Y,Score).
+solving_dir_score(left, 1000).
+solving_dir_score(down,Score) :- pos(X,Y) & possible(down) & solving_pos_score(X,Y+1,Score).
+solving_dir_score(down,1000).
+
 is_x_dir(left).
 is_x_dir(right).
 is_y_dir(up).
@@ -48,6 +65,7 @@ euler_dist(A,B,0) :- A=B.
 
 // GOTO PLAN - nejdrive jede k depotu, pak krouzi kolem nej
 goto_plan([[X,Y]]) :- depot(X,Y). // nejdrive jed k depotu
+//goto_plan([[9,26],[11,15]]).
 empty_goto_plan :- goto_plan([]).
 get_first_position(X,Y) :- goto_plan([H|T]) & first(H, X) & second(H, Y).
 
@@ -83,8 +101,8 @@ distance(MyX,MyY,X,Y,Dist) :- distance_x_line(MyX, X, Y, Dist_Y) &
 on_board(X,Y) :- grid_size(GX,GY) & X < GX & Y < GY.
 
 // vypocet funkce agregovane vzdalenosti od mista, kde agent je a od depotu
-aggregated_distance(PosDist, DepDist, Dist) :- DepDist > 32 & Dist = (PosDist + 1.5*DepDist).
-aggregated_distance(PosDist, DepDist, Dist) :- DepDist < 33 & Dist = (PosDist + 2.0*DepDist).
+aggregated_distance(PosDist, DepDist, Dist) :- DepDist > 32 & Dist = (PosDist + 1.6*DepDist).
+aggregated_distance(PosDist, DepDist, Dist) :- DepDist < 33 & Dist = (PosDist + 2.1*DepDist).
 
 // zjisteni vsech bodu, ktere jsou aktualne od agenta nejblize
 min_distance(Unvisited,UnvisitedMinDistList) :-
@@ -251,45 +269,55 @@ all_visited :- .count(unvisited(X,Y),0).
 // zruseni faktu, ze obchazim prekazku
 +!reset_solving_obstacle <- -solving_obstacle(_,_).
 
+// ulozeni kolikrat jsem byl na danem policku pri obchazeni prekazky
+// timto mechanismem se snazi agent vyhnout se cyklum v bludisti
++!update_solving_position : pos(PosX, PosY) 
+    <- if(solving_position(PosX,PosY,_)) {
+	       ?solving_position(PosX,PosY,C);
+		   -solving_position(PosX,PosY,_);
+		   +solving_position(PosX,PosY,C+1);
+	   }
+	   else {
+	       +solving_position(PosX,PosY,1)
+	   }.
+
+// vybere optimalni smer pro obejiti prekazky. Zalozeno na principu
+// skore kazdeho pole, ktere se pocita z toho, kolikrat na danem poli pri
+// obchazeni dane prekazky byl. Timto se vyhneme problemu bludiste.
++!choose_optimal_solving_dir : solving_obstacle(TargetDir, SolvingDir)
+    <- ?solving_dir_score(TargetDir, TargetScore);
+	   ?solving_dir_score(SolvingDir, SolvingScore);
+	   ?complement_dir(TargetDir, CompTargetDir);
+	   ?solving_dir_score(CompTargetDir, CompTargetScore);
+	   ?complement_dir(SolvingDir, CompSolvingDir);
+	   ?solving_dir_score(CompSolvingDir, CompSolvingScore);
+	   // vybere minimalni skore == nejlepsi cesta
+	   .min([TargetScore, SolvingScore, CompTargetScore, CompSolvingScore], M);
+	   if (is(M, TargetScore)) {
+	       +solving_dir(TargetDir)
+	   } else { if (is(M, SolvingScore)) {
+	       +solving_dir(SolvingDir);
+	   } else { if (is(M, CompTargetScore)) {
+	       +solving_dir(CompTargetDir)
+	   } else { if (is(M, CompSolvingScore)) {
+	       +solving_dir(CompSolvingDir)
+	   }}}}.
+	   
 // pokud uz tam jsi, nikam nechod
 +!goto(X,Y) : pos(X,Y) <- true.
 
 // obchazim prekazku
-+!goto(X,Y) : solving_obstacle(TargetDir, SolvingDir)
-    <- if (possible(TargetDir)) {
++!goto(X,Y) : solving_obstacle(TargetDir, SolvingDir) 
+    <- // pridani bodu do databaze solving_position
+	   !update_solving_position; 
+	   // vybere optimalni smer do solving_dir
+	   !choose_optimal_solving_dir;
+	   ?solving_dir(D);
+	   -solving_dir(_);
+	   // jde tim smerem
+	   do(D);
+	   if (is(TargetDir,D)) {
 	       !reset_solving_obstacle;
-	       do(TargetDir)
-	   }
-	   else {
-	       if (possible(SolvingDir)) {
-		       do(SolvingDir)
-		   }
-	       else {
-			   if (is_x_dir(TargetDir)) {
-			       ?complement_x_dir(TargetDir, CompTargetDir);
-			   }
-			   else {
-			       ?complement_y_dir(TargetDir, CompTargetDir);
-			   }
-               if (possible(CompTargetDir)) {
-				   !reset_solving_obstacle;
-				   +solving_obstacle(SolvingDir, CompTargetDir);
-				   do(CompTargetDir)
-			   }
-			   else {
-				   if (is_x_dir(SolvingDir)) {
-					   ?complement_x_dir(SolvingDir, CompSolvingDir);
-				   }
-				   else {
-					   ?complement_y_dir(SolvingDir, CompSolvingDir);
-				   }
-				   if (possible(CompSolvingDir)) {
-					   !reset_solving_obstacle;
-					   +solving_obstacle(CompTargetDir, CompSolvingDir);
-					   do(CompSolvingDir)
-				   }
-			   }
-		   }
 	   }.
 
 // jdu normalne za cilem po x-ove ose
@@ -436,6 +464,9 @@ all_visited :- .count(unvisited(X,Y),0).
 		 // pokud jsem u cile, smazu ho z goto planu
 		 if (get_first_position(MyX,MyY)) {
 		     !pop_first_position;
+			 // pokud jsem obchazel prekazky, vymazu databazi
+			 !reset_solving_obstacle;
+			 .abolish(solving_position(_,_,_));
 		 }
 		 // nastavi se novy stav agenta
 	     !set_next_state;
