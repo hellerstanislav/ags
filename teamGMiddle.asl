@@ -159,8 +159,13 @@ all_visited :- .count(unvisited(X,Y),0).
 
 // pridani vsech viditelnych prekazek do databaze znalosti agenta
 +!register_obstacles
-    <- .findall([X,Y], obstacle(X,Y), VisibleObstacles);
-	    !register_obstacles_worker(VisibleObstacles).
+    <- .count(known_obstacle(A,B), ObsCount);
+	   if (ObsCount > 25) {
+	       // SPEEDUP!
+	       .abolish(known_obstacle(_,_));
+	   }
+	   .findall([X,Y], obstacle(X,Y), VisibleObstacles);
+	   !register_obstacles_worker(VisibleObstacles).
 
 +!register_obstacles_worker([]) <- true.
 +!register_obstacles_worker([H|T])
@@ -173,7 +178,7 @@ all_visited :- .count(unvisited(X,Y),0).
     <- .findall([X,Y], gold(X,Y), VisibleGold);
 	   for ( .member(H,VisibleGold) ) {
 	       ?first(H,X); ?second(H,Y);
-           +known_gold(X,Y); -unvisited(X,Y); // zapsani 
+           +known_gold(X,Y); // zapsani 
        }.
 
 // pridavani dreva do databaze
@@ -181,9 +186,12 @@ all_visited :- .count(unvisited(X,Y),0).
     <- .findall([X,Y], wood(X,Y), VisibleWood);
 	   for ( .member(H,VisibleWood) ) {
 	       ?first(H,X); ?second(H,Y);
-           +known_wood(X,Y); -unvisited(X,Y); // zapsani 
+           +known_wood(X,Y); // zapsani 
        }.
 
++!register_visited : pos(X,Y)
+    <- -unvisited(X,Y); -unvisited(X-1,Y); -unvisited(X+1,Y);
+	    -unvisited(X,Y-1); -unvisited(X,Y+1).
 ////////////////////////////////////////////////////////////////////////////////
 // PLANOVANI TRAS (pruzkum, tezba)
 ////////////////////////////////////////////////////////////////////////////////
@@ -235,7 +243,18 @@ all_visited :- .count(unvisited(X,Y),0).
 	   else { // jinak je cesta po x a pak po y mensi
 		   // jdeme z (MyX,MyY) do (X,MyY)
 		   if ((not is(MyX,X)) & (not is(MyY,Y))) {
-	           !prepend_to_goto_plan(X,MyY);
+		       // pokud jsou cesty stejne dlouhe
+		       if (is((Dist_MyX + Dist_Y),(Dist_MyY + Dist_X))) {
+			       if (unvisited(X,MyY)) {
+				       !prepend_to_goto_plan(X,MyY);
+				   }
+				   else {
+				       !prepend_to_goto_plan(MyX,Y);
+				   }
+			   }
+			   else {
+	               !prepend_to_goto_plan(X,MyY);
+			   }
 		   }
 	   }.
 
@@ -309,6 +328,7 @@ all_visited :- .count(unvisited(X,Y),0).
 // obchazim prekazku
 +!goto(X,Y) : solving_obstacle(TargetDir, SolvingDir) 
     <- // pridani bodu do databaze solving_position
+	   .print("SOLVING OBSTACLE");
 	   !update_solving_position; 
 	   // vybere optimalni smer do solving_dir
 	   !choose_optimal_solving_dir;
@@ -383,11 +403,13 @@ all_visited :- .count(unvisited(X,Y),0).
 +!goto_next_position
     <- // pokud nemas prazdny plan, tak jedem
 	   if(not empty_goto_plan) {
+	       .print("NOT EMPTY GOTO PLAN");
 	       // ziskani prvni pozice z planu, kam se ma jet
 	       ?get_first_position(X,Y);
 		   // Pokud je tam prekazka (tzn pozice byla naplanovana pred tim, nez
 		   // jsem uvidel, ze tam je prekazka), tak tam nejedu a pokracuju dal.
-		   if (known_obstacle(X,Y)) {
+		   if (known_obstacle(X,Y) | obstacle(X,Y)) {
+		       .print("KNOWN OBSTACLE | OBSTACLCE");
 		       // odstraneni prvniho prvku v goto planu
 		       !pop_first_position;
 			   // rekurzivne se zavola sam na sebe (jede na dalsi prvek v goto planu)
@@ -459,10 +481,12 @@ all_visited :- .count(unvisited(X,Y),0).
 
 // dela kroky dokud v danem kole muze
 +!do_step : moves_left(M) & pos(MyX,MyY)
-      <- // zaznamenam, si, kde jsem
-         -unvisited(MyX,MyY);
+      <- // zaznamenam, si, kde jsem a co vidim
+         !register_visited;
+		 ?get_first_position(X,Y); .print("Mym cilem je ", X, " ", Y);
 		 // pokud jsem u cile, smazu ho z goto planu
 		 if (get_first_position(MyX,MyY)) {
+		     .print("MAZU SOLVING POSITION a SOLVING OBSTACLE");
 		     !pop_first_position;
 			 // pokud jsem obchazel prekazky, vymazu databazi
 			 !reset_solving_obstacle;
@@ -498,6 +522,7 @@ all_visited :- .count(unvisited(X,Y),0).
 
 // v prvnim kroku se nageneruji nenavstivene pozice
 +step(0) <- !generate_unvisited; !do_step.
-+step(X) <- .print("Step: ", X); !do_step.
-
++step(X) <- .print("Step: ", X);
+            !do_step.
+			
 
