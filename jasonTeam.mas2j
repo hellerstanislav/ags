@@ -5,16 +5,16 @@
 MAS miners {
     infrastructure: Centralised
 	
-    environment: mining.MiningPlanet(2,0,yes)
+    environment: mining.MiningPlanet(1,0,yes)
         // parameters: 1. environment configuration id (from 1 to 3)
         //             2. sleep time (in ms) after each action
         //             3. whether display the gui
 	    
 	agents:
 		aSlow teamGSlow;
-		aMiddle teamGMiddle;
+		aMiddle teamGMiddle [verbose=10];
 		aFast teamGFast;
-		bSlow teamySlow;
-		bMiddle teamyMiddle;
-		bFast teamyFast;
+		bSlow teamySlow [verbose=0];
+		bMiddle teamyMiddle [verbose=0];
+		bFast teamyFast [verbose=0];
 }

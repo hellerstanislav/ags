@@ -1,17 +1,43 @@
+/* File: teamGMiddle.asl
+ * Authors: Daniela Duricekova, xduric00@stud.fit.vutbr.cz
+ *			Stanislav Heller, xhelle03@stud.fit.vutbr.cz
+ *			Andrej Trnkoci, xtrnko00@stud.fit.vutbr.cz
+ * Description: This file implements behaviour of the middle agent. In the 
+ *				first phase, when the fast agent is searching the board, the
+ *				middle agent computes the distances to the positions with the gold/
+ *				wood and sends the position with the minimal distance to the gold/
+ *				wood (minimal for the slow and the middle agent) to the slow agent. 
+ * 				Then they are going to this position, pick gold/wood and remove it 
+ *				from their databases (the middle agent takes care of it). If the 
+ *				next picking up will be not possible, the slow agent is going to 
+ *				the depot. Next picking up is not possible, if they are full. 
+ *				Otherwise, they are going to the next gold/wood. In the second phase, 
+ *				when the fast agent is not searching the board, the middle agent 
+ * 				calculates the distances to the positions with the gold/wood
+ *				(minimal for the fast and the middle agent if the slow agent is 
+ *				going to depot or minimal for all agents) and sends the position
+ *				with the minimal distance to the agents (to the fast agent or to
+ *				both agents if the slow agent is not going to the depot).
+ */
 
+// The status of the middle agent:
+// goto_depot: The agent is going to the depot.
+// goto_mine: The agent is mining.
+state(goto_mine).
+
+// It is used to determine the borders of the board.
 border(X,-1).
 border(-1,Y).
 border(X,Y) :- grid_size(X,_).
 border(X,Y) :- grid_size(_,Y).
 
-abs(X, X) :- X > -1.
-abs(X, AbsX) :- AbsX = -X.
-
+// It determines if it is possible to go in the selected diretion.
 possible(right) :- pos(MyX, MyY) & not (obstacle(MyX+1, MyY) | border(MyX+1, MyY)).
 possible(up) :- pos(MyX, MyY) & not (obstacle(MyX, MyY-1) | border(MyX, MyY-1)).
 possible(left) :- pos(MyX, MyY) & not (obstacle(MyX-1, MyY) | border(MyX-1, MyY)).
 possible(down) :- pos(MyX, MyY) & not (obstacle(MyX, MyY+1) | border(MyX, MyY+1)).
 
+// It complements current direction in x/y axis to the opposite direction.
 complement_x_dir(left, right).
 complement_x_dir(right, left).
 complement_x_dir(none, left).
@@ -19,14 +45,18 @@ complement_y_dir(up, down).
 complement_y_dir(down, up).
 complement_y_dir(none, down).
 
+// It complements current direction to the opposite direction.
 complement_dir(left, right).
 complement_dir(right, left).
 complement_dir(up, down).
 complement_dir(down, up).
 
+// It returns the score of the given position (X, Y). The score is store in the
+// solving_position(X, Y, Score).
 solving_pos_score(X,Y,0) :- .count(solving_position(X,Y,_),0).
 solving_pos_score(X,Y,Score) :- solving_position(X,Y,Score).
 
+// It calculates the scores of all directions.
 solving_dir_score(right,Score) :- pos(X,Y) & possible(right) & solving_pos_score(X+1,Y,Score).
 solving_dir_score(right,1000).
 solving_dir_score(up,Score) :- pos(X,Y) & possible(up) & solving_pos_score(X,Y-1,Score).
@@ -36,44 +66,72 @@ solving_dir_score(left, 1000).
 solving_dir_score(down,Score) :- pos(X,Y) & possible(down) & solving_pos_score(X,Y+1,Score).
 solving_dir_score(down,1000).
 
-is_x_dir(left).
-is_x_dir(right).
-is_y_dir(up).
-is_y_dir(down).
-
+// It specifies which direction should be followed according to the current position
+// and the target position in x axis.
 get_x_dir(MyX, TargetX, right) :- TargetX > MyX.
 get_x_dir(MyX, TargetX, left) :- TargetX < MyX.
 get_x_dir(MyX, TargetX, none) :- TargetX == MyX.
+
+// It specifies which direction should be followed according to the current position
+// and the target position in y axis.
 get_y_dir(MyY, TargetY, up) :- TargetY < MyY.
 get_y_dir(MyY, TargetY, down) :- TargetY > MyY.
 get_y_dir(MyY, TargetY, none) :- TargetY == MyY.
 
-//primitiva
-first([H|T], H).
+// It gets the first coordination, second coordination from the list of the form 
+// [[X,Y],[X1, Y1], ...].
+first([H|_], H).
 second([H|T], HH) :- first(T, HH).
+
+// It compares two elements.
 is(X,X).
-// pridani prvku na zacatek seznamu
+
+// It adds an element to the front of the list.
 prepend(H,[], [H]).
 prepend(H,L, [H|L]).
-// test, zda X lezi v intervalu (From,To)
+
+// It tests if X lies in the interval (From, To).
 between(X, From, To) :- From < To & X > From & X < To.
 between(X, From, To) :- From > To & X < From & X > To.
-// vzdalenost mezi dvema body v 1D
+
+// It computes the Euler distance of two points in 1-D.
 euler_dist(A,B,Dist) :- A > B & Dist = A - B.
 euler_dist(A,B,Dist) :- A < B & Dist = B - A.
 euler_dist(A,B,0) :- A=B.
 
-// GOTO PLAN - nejdrive jede k depotu, pak krouzi kolem nej
-goto_plan([[X,Y]]) :- depot(X,Y). // nejdrive jed k depotu
-//goto_plan([[9,26],[11,15]]).
+// Goto plan. The middle and the slow agents wait for gold or wood to be added
+// to their databases.
+goto_plan([[]]).
+
+// It checks if goto plan is empty.
 empty_goto_plan :- goto_plan([]).
+
+// It checks if the list is empty.
+empty_list([]).
+
+// It gets the (X, Y) coordinations from the head of the goto plan.
 get_first_position(X,Y) :- goto_plan([H|T]) & first(H, X) & second(H, Y).
 
-// Zjistovani, jestli mezi dvema body na jedne souradnici lezi prekazka
+// It removes the first element from the goto plan list.
++!pop_first_position
+    <- ?goto_plan([H|T]);
+	   -goto_plan(_);
+	   +goto_plan(T).
+	   
+// It adds point to the beginning of the goto plan.
++!prepend_to_goto_plan(X,Y)
+    <- ?goto_plan(G);
+	   if (not get_first_position(X,Y)) {
+	       ?prepend([X,Y],G,GG);
+	       -goto_plan(_);
+	       +goto_plan(GG)
+	   }.
+
+// It checks if there is an obstacle between two points on x/y coordination.
 obstacle_on_x_path(X1,X2,Y) :- known_obstacle(Xobs, Y) & between(Xobs, X1, X2).
 obstacle_on_y_path(Y1,Y2,X) :-known_obstacle(X, Yobs) & between(Yobs, Y1, Y2).
 
-// zjistovani vzdalenosti mezi dvema body na stejne souradnici
+// It calculates the distance between two points on the same x/y coordination.
 distance_x_line(X1, X2, Y, Dist) :- obstacle_on_x_path(X1,X2,Y) & 
                                     euler_dist(X1,X2,D) & 
 								    Dist = D + 3.
@@ -83,11 +141,7 @@ distance_y_line(Y1, Y2, X, Dist) :- obstacle_on_y_path(Y1,Y2,X) &
 									Dist = D + 3.
 distance_y_line(Y1, Y2, X, Dist) :- euler_dist(Y1,Y2,Dist).
 
-// stav agenta
-// searching | harvesting | going_to_depot
-state(searching).
-
-// zjistovani vzdalenosti mezi dvema libovolnymi body
+// It calculates the distance between two given points.
 distance(MyX,MyY,X,Y,Dist) :- distance_x_line(MyX, X, Y, Dist_Y) &
 							  distance_x_line(MyX, X, MyY, Dist_MyY) &
 							  distance_y_line(MyY, Y, X, Dist_X) &
@@ -96,183 +150,92 @@ distance(MyX,MyY,X,Y,Dist) :- distance_x_line(MyX, X, Y, Dist_Y) &
 							  B = Dist_MyY + Dist_X &
 							  .min([A,B],Dist).
 
-// predikat pro zjisteni, jestli bod (X,Y) lezi na hraci plose
-//on_board(X,Y) :- grid_size(GX,GY) & between(X,-1,GX+1) & between(Y, -1, GY+1).
-on_board(X,Y) :- grid_size(GX,GY) & X < GX & Y < GY.
+// Computes distance from the middle to the treasure.
+compute_distance_middle(MiddleDist, Dist) :-
+	Dist = math.ceil(MiddleDist / 2).
+							  
+// Computes distance from agents (middle and slow) to the treasure.
+compute_distance_middle_slow(SlowDist, MiddleDist, Dist) :-
+	Dist = SlowDist + math.ceil(MiddleDist / 2).
+							
+// Computes distance from agents (middle and fast) to the treasure.
+compute_distance_middle_fast(MiddleDist, FastDist, Dist) :-
+	Dist = math.ceil(MiddleDist / 2) + math.ceil(FastDist / 3).
 
-// vypocet funkce agregovane vzdalenosti od mista, kde agent je a od depotu
-aggregated_distance(PosDist, DepDist, Dist) :- DepDist > 32 & Dist = (PosDist + 1.6*DepDist).
-aggregated_distance(PosDist, DepDist, Dist) :- DepDist < 33 & Dist = (PosDist + 2.1*DepDist).
+// Computes distance from agents (middle, fast, slow) to the treasure.
+compute_distance_all(SlowDist, MiddleDist, FastDist, Dist) :-
+	Dist = SlowDist + math.ceil(MiddleDist / 2) + math.ceil(FastDist / 3).
+	
+// It helps to compute distances to the point H in different agent's state.
+compute_distance(H, Dist) :-
+	state(alone) &
+	pos(MiddleX, MiddleY) &
+	first(H, TargetX) & second(H, TargetY) &
+	distance(MiddleX, MiddleY, TargetX, TargetY, MiddleDist) &
+	compute_distance_middle(MiddleDist, Dist).
 
-// zjisteni vsech bodu, ktere jsou aktualne od agenta nejblize
-min_distance(Unvisited,UnvisitedMinDistList) :-
-    min_distance_worker(Unvisited,1000,[],UnvisitedMinDistList).
+compute_distance(H, Dist) :-
+	state(middle_slow_mine) &
+	state(X) &
+	pos(MiddleX, MiddleY) &
+	aSlowPos(SlowX, SlowY) &
+	first(H, TargetX) & second(H, TargetY) &
+    distance(SlowX, SlowY, TargetX, TargetY, SlowDist) &
+	distance(MiddleX, MiddleY, TargetX, TargetY, MiddleDist) &
+	compute_distance_middle_slow(SlowDist, MiddleDist, Dist).
 
-min_distance_worker([],_,K,K).
+compute_distance(H, Dist) :-
+	state(middle_fast_mine) &
+	pos(MiddleX, MiddleY) &
+	aFastPos(FastX, FastY) &
+	first(H, TargetX) & second(H, TargetY) &
+    distance(FastX, FastY, TargetX, TargetY, FastDist) &
+	distance(MiddleX, MiddleY, TargetX, TargetY, MiddleDist) &
+	compute_distance_middle_fast(MiddleDist, FastDist, Dist).
+	
+compute_distance(H, Dist) :-
+	state(all_mine) &
+	pos(MiddleX, MiddleY) &
+	aSlowPos(SlowX, SlowY) &
+	aFastPos(FastX, FastY) &
+	first(H, TargetX) & second(H, TargetY) &
+    distance(SlowX, SlowY, TargetX, TargetY, SlowDist) &
+	distance(MiddleX, MiddleY, TargetX, TargetY, MiddleDist) &
+	distance(FastX, FastY, TargetX, TargetY, FastDist) &
+	compute_distance_all(SlowDist, MiddleDist, FastDist, Dist).
 
-min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
-    pos(PosX,PosY) & depot(DepX,DepY) & 
-	first(H,Xtarget) & second(H,Ytarget) &
-    distance(PosX,PosY,Xtarget,Ytarget,PosDist) &
-	distance(DepX,DepY,Xtarget,Ytarget,DepDist) &
-	aggregated_distance(PosDist, DepDist, Dist) &
+// This solves the situatin if aSlowPos() or aFastPos() is not updated in DB.
+compute_distance(_, 1000) :- true.
+
+// It calculates the position of gold/wood to which the agents are able to come 
+// in the shortest time.
+min_distance(TreasureList,TreasureListMinDist) :-
+    min_distance_worker(TreasureList,1000,[], TreasureListMinDist).
+
+min_distance_worker([], _, K, K) :- true.
+
+min_distance_worker([H|T], MinDist, Keeper, TreasureListMinDist) :-
+	compute_distance(H, Dist) &
 	Dist < MinDist &
-	min_distance_worker(T,Dist,[H],UnvisitedMinDistList).
+	min_distance_worker(T, Dist, [H], TreasureListMinDist).
 
-min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
-    pos(PosX,PosY) & depot(DepX,DepY) &
-	first(H,Xtarget) & second(H,Ytarget) &
-    distance(PosX,PosY,Xtarget,Ytarget,PosDist) &
-	distance(DepX,DepY,Xtarget,Ytarget,DepDist) &
-	aggregated_distance(PosDist, DepDist, Dist) &
-	is(Dist,MinDist) & .concat([H],Keeper,NewKeeper) & 
-	min_distance_worker(T,Dist,NewKeeper,UnvisitedMinDistList).
+min_distance_worker([H|T], MinDist, Keeper, TreasureListMinDist) :-
+	compute_distance(H, Dist) &
+	is(Dist, MinDist) & .concat([H], Keeper, NewKeeper) & 
+	min_distance_worker(T, Dist, NewKeeper, TreasureListMinDist).
 
-min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
-    pos(PosX,PosY) & depot(DepX,DepY) &
-	first(H,Xtarget) & second(H,Ytarget) &
-    distance(PosX,PosY,Xtarget,Ytarget,PosDist) &
-	distance(DepX,DepY,Xtarget,Ytarget,DepDist) &
-	aggregated_distance(PosDist, DepDist, Dist) &
+min_distance_worker([H|T], MinDist, Keeper, TreasureListMinDist) :-
+    compute_distance(H, Dist) &
 	Dist > MinDist &
-	min_distance_worker(T,MinDist,Keeper,UnvisitedMinDistList).
-
-// vsechna mista na mape uz byla navstivena
-all_visited :- .count(unvisited(X,Y),0).
-
-// vygeneruje na zacatku vsechny nenavstivene body, ktere je nutne navstivit.
-// pravdepodobne budem generovat 3x3 nebo 2x2 sit
-+!generate_unvisited : grid_size(GX,GY)
-    <- for ( .range(X,0,GX-1) ) {
-	       if ((X mod 3) == 0) {
-	           for ( .range(Y,0,GY-1) ) {
-		           if ((Y mod 2) == 0) { +unvisited(X,Y) }
-		       }
-		   }
-       }.
-
-////////////////////////////////////////////////////////////////////////////////
-// PLANY PRO PRIDAVANI A ODSTRANOVANI PREDSTAV AGENTA O OKOLI (prekazky, suroviny) 
-////////////////////////////////////////////////////////////////////////////////
-
-// TODO: ROZESILANI ZNALOSTI OSTATNIM AGENTUM!
-
-// pridani vsech viditelnych prekazek do databaze znalosti agenta
-+!register_obstacles
-    <- .count(known_obstacle(A,B), ObsCount);
-	   if (ObsCount > 25) {
-	       // SPEEDUP!
-	       .abolish(known_obstacle(_,_));
-	   }
-	   .findall([X,Y], obstacle(X,Y), VisibleObstacles);
-	   !register_obstacles_worker(VisibleObstacles).
-
-+!register_obstacles_worker([]) <- true.
-+!register_obstacles_worker([H|T])
-    <- ?first(H,X); ?second(H,Y); // ziskani souradnic
-	   +known_obstacle(X,Y); -unvisited(X,Y); // zapsani prekazky do db
-	   !register_obstacles_worker(T).
-
-// pridavani zlata
-+!register_gold
-    <- .findall([X,Y], gold(X,Y), VisibleGold);
-	   for ( .member(H,VisibleGold) ) {
-	       ?first(H,X); ?second(H,Y);
-           +known_gold(X,Y); // zapsani 
-       }.
-
-// pridavani dreva do databaze
-+!register_wood
-    <- .findall([X,Y], wood(X,Y), VisibleWood);
-	   for ( .member(H,VisibleWood) ) {
-	       ?first(H,X); ?second(H,Y);
-           +known_wood(X,Y); // zapsani 
-       }.
-
-+!register_visited : pos(X,Y)
-    <- -unvisited(X,Y); -unvisited(X-1,Y); -unvisited(X+1,Y);
-	    -unvisited(X,Y-1); -unvisited(X,Y+1).
-////////////////////////////////////////////////////////////////////////////////
-// PLANOVANI TRAS (pruzkum, tezba)
-////////////////////////////////////////////////////////////////////////////////
-
-// odstrani prvni prvek z goto planu
-+!pop_first_position
-    <- ?goto_plan([H|T]);
-	   -goto_plan(_);
-	   +goto_plan(T).
-
-// pomocny rekurzivni srotovac pro naplanovani vsech bodu z listu UnvisitedMinDistList
-+!plan_nearest_unvisited_worker([]) <- true.
-+!plan_nearest_unvisited_worker([H|T])
-    <- ?first(H,X); ?second(H,Y);
-	   !plan_best_path(X,Y);
-	   !plan_nearest_unvisited_worker(T).
-	   
-// prida do planu nejblizsi nenavstivene body na mape
-+!plan_nearest_unvisited
-    <- .findall([X,Y], unvisited(X,Y), Unvisited);
-	   ?min_distance(Unvisited,UnvisitedMinDistList);
-	   !plan_nearest_unvisited_worker(UnvisitedMinDistList).
-	   
-// prida bod na zacatek planu
-+!prepend_to_goto_plan(X,Y)
-    <- ?goto_plan(G);
-	   // pokud uz neni tento bod naplanovan na zacatku, tak ho naplanuje
-	   if (not get_first_position(X,Y)) {
-	       ?prepend([X,Y],G,GG);
-	       -goto_plan(_);
-	       +goto_plan(GG)
-	   }.
-
-// naplanuje do goto planu nejlepsi moznou cestu do bodu A[X,Y]
-+!plan_best_path(X,Y) : pos(MyX, MyY)
-    <- ?distance_x_line(MyX, X, Y, Dist_Y);
-	   ?distance_x_line(MyX, X, MyY, Dist_MyY);
-	   ?distance_y_line(MyY, Y, X, Dist_X);
-	   ?distance_y_line(MyY, Y, MyX, Dist_MyX);
-	   // naplanuju cestu do cile
-	   !prepend_to_goto_plan(X,Y);
-	   // pokud je cesta po y a pak po x mensi
-	   if ((Dist_MyX + Dist_Y) < (Dist_MyY + Dist_X)) {
-		   // jdeme z (MyX,MyY) do (MyX,Y) pokud tam je nejaka vzdalenost
-		   if (not is(MyY,Y) & not is(MyX,X)) {
-	           !prepend_to_goto_plan(MyX,Y);
-		   }
-	   }
-	   else { // jinak je cesta po x a pak po y mensi
-		   // jdeme z (MyX,MyY) do (X,MyY)
-		   if ((not is(MyX,X)) & (not is(MyY,Y))) {
-		       // pokud jsou cesty stejne dlouhe
-		       if (is((Dist_MyX + Dist_Y),(Dist_MyY + Dist_X))) {
-			       if (unvisited(X,MyY)) {
-				       !prepend_to_goto_plan(X,MyY);
-				   }
-				   else {
-				       !prepend_to_goto_plan(MyX,Y);
-				   }
-			   }
-			   else {
-	               !prepend_to_goto_plan(X,MyY);
-			   }
-		   }
-	   }.
-
-// naplanuje trasu na nejblizsi zlato
-// TODO i drevo
-+!plan_harvesting
-    <- .findall([X,Y], known_gold(X,Y), Gold);
-	   ?min_distance(Gold,MinDistGold);
-	   for ( .member(H,MinDistGold) ) {
-           ?first(H,X); ?second(H,Y);
-		   !plan_best_path(X,Y);
-	   }.
-
-
-////////////////////////////////////////////////////////////////////////////////
-// POHYB AGENTA - plany pro pohyb a obchazeni prekazek
-////////////////////////////////////////////////////////////////////////////////
-// pomocny plan pro zmenu smeru, kudy priste agent bude prekazku obchazet
+	min_distance_worker(T, MinDist, Keeper, TreasureListMinDist).
+					  
+// It calculates the position of gold/wood where both agents (slow and middle)
+// are able to come in the shortest time.
++!compute_treasure_min_dist(TreasureListMinDist) <-
+	.findall([X1, Y1], known_gold(X1, Y1), Gold);
+	?min_distance(Gold, TreasureListMinDist).
+	
+// It helps to change direction when the agent tries to bypass the obstacle. 
 +!change_complement_x_dir
     <- ?complement_x_dir(none, X);
 	   ?complement_x_dir(X, CompX);
@@ -285,11 +248,11 @@ all_visited :- .count(unvisited(X,Y),0).
 	   -complement_y_dir(none, _);
 	   +complement_y_dir(none, CompY).
 
-// zruseni faktu, ze obchazim prekazku
+// It removes the fact that the agent is bypassing an obstacle.
 +!reset_solving_obstacle <- -solving_obstacle(_,_).
 
-// ulozeni kolikrat jsem byl na danem policku pri obchazeni prekazky
-// timto mechanismem se snazi agent vyhnout se cyklum v bludisti
+// It stores how many times the agent was on this cell as a result of bypassing 
+// an obstacle. This is the way how the agent can avoid the cycles in the maze.
 +!update_solving_position : pos(PosX, PosY) 
     <- if(solving_position(PosX,PosY,_)) {
 	       ?solving_position(PosX,PosY,C);
@@ -300,9 +263,9 @@ all_visited :- .count(unvisited(X,Y),0).
 	       +solving_position(PosX,PosY,1)
 	   }.
 
-// vybere optimalni smer pro obejiti prekazky. Zalozeno na principu
-// skore kazdeho pole, ktere se pocita z toho, kolikrat na danem poli pri
-// obchazeni dane prekazky byl. Timto se vyhneme problemu bludiste.
+// It chooses the optimal direction for bypassing an obstacle. It is based on
+// the principle of the score of every cell on the board. It is used to avoid
+// problems that appear as a result of cycles' existence in the maze.
 +!choose_optimal_solving_dir : solving_obstacle(TargetDir, SolvingDir)
     <- ?solving_dir_score(TargetDir, TargetScore);
 	   ?solving_dir_score(SolvingDir, SolvingScore);
@@ -310,7 +273,7 @@ all_visited :- .count(unvisited(X,Y),0).
 	   ?solving_dir_score(CompTargetDir, CompTargetScore);
 	   ?complement_dir(SolvingDir, CompSolvingDir);
 	   ?solving_dir_score(CompSolvingDir, CompSolvingScore);
-	   // vybere minimalni skore == nejlepsi cesta
+	   // It chooses the minimal score which represents the best path.
 	   .min([TargetScore, SolvingScore, CompTargetScore, CompSolvingScore], M);
 	   if (is(M, TargetScore)) {
 	       +solving_dir(TargetDir)
@@ -322,25 +285,21 @@ all_visited :- .count(unvisited(X,Y),0).
 	       +solving_dir(CompSolvingDir)
 	   }}}}.
 	   
-// pokud uz tam jsi, nikam nechod
+// If agent is at the destination position.
 +!goto(X,Y) : pos(X,Y) <- true.
 
-// obchazim prekazku
+// If agent bypasses an obstacle.
 +!goto(X,Y) : solving_obstacle(TargetDir, SolvingDir) 
-    <- // pridani bodu do databaze solving_position
-	   .print("SOLVING OBSTACLE");
-	   !update_solving_position; 
-	   // vybere optimalni smer do solving_dir
+    <- !update_solving_position; 
 	   !choose_optimal_solving_dir;
 	   ?solving_dir(D);
 	   -solving_dir(_);
-	   // jde tim smerem
 	   do(D);
 	   if (is(TargetDir,D)) {
 	       !reset_solving_obstacle;
 	   }.
 
-// jdu normalne za cilem po x-ove ose
+// If agent is going along the x-axis to its goal.
 +!goto(X,Y) : pos(MyX, MyY) & get_x_dir(MyX, X, Xdir) & not (Xdir == none)
     <- if (possible(Xdir)) {
 	       do(Xdir)
@@ -367,7 +326,7 @@ all_visited :- .count(unvisited(X,Y),0).
 		   }
 	   }.
 
-// jdu normalne za cilem po y-ove ose
+// If agent is going along the y-axis to its goal.
 +!goto(X,Y) : pos(MyX, MyY) & get_y_dir(MyY, Y, Ydir) & not (Ydir == none)
     <- if (possible(Ydir)) {
 	       do(Ydir)
@@ -394,135 +353,110 @@ all_visited :- .count(unvisited(X,Y),0).
 		   }
 	   }.
 
-////////////////////////////////////////////////////////////////////////////////
-// MAIN - plany pro rizeni agenta (stavovy automat a obsluzne plany typu goto)
-////////////////////////////////////////////////////////////////////////////////
-
-// udela jeden krok k prvni naplanovane pozici
-// pokud nejsou zadne naplanovane pozice, jde tam, kde jeste nebyl
-+!goto_next_position
-    <- // pokud nemas prazdny plan, tak jedem
-	   if(not empty_goto_plan) {
-	       .print("NOT EMPTY GOTO PLAN");
-	       // ziskani prvni pozice z planu, kam se ma jet
-	       ?get_first_position(X,Y);
-		   // Pokud je tam prekazka (tzn pozice byla naplanovana pred tim, nez
-		   // jsem uvidel, ze tam je prekazka), tak tam nejedu a pokracuju dal.
-		   if (known_obstacle(X,Y) | obstacle(X,Y)) {
-		       .print("KNOWN OBSTACLE | OBSTACLCE");
-		       // odstraneni prvniho prvku v goto planu
-		       !pop_first_position;
-			   // rekurzivne se zavola sam na sebe (jede na dalsi prvek v goto planu)
-			   !goto_next_position
-		   }
-		   else {
-		       !goto(X,Y)
-		   }
+// Agent goes to the depot.
++!goto_depot : depot(DepX, DepY) & moves_left(Moves)
+    <- if (pos(DepX, DepY)) {
+			if (Moves > 1) {
+				.print("**************************************************1");
+				do(drop);
+			} else {
+				.print("**************************************************1");
+				do(skip);
+			}
 	   }
 	   else {
-	       !plan_nearest_unvisited;
-		   !goto_next_position
+	       !goto(DepX,DepY);
 	   }.
-
-+!go_harvesting
-    <- ?get_first_position(X,Y);
-	   if (pos(X,Y)) {
-	       // pokud uz je na miste, vezme surovinu
-	       do(pick);
-		   // TODO: kolik je surovin na jednom miste? Tady by asi melo byt, ze
-		   // pokud uz tam zadna surovina nezbyla, tak by ji mel oddelat z planu,
-		   // ale jinak by mel tuto pozici v planu nechat!
-		   //!pop_first_position; // oddela toto misto z planu
-		   // a predela rozhodne se jit do depotu
-		   -state(_);
-		   +state(going_to_depot)
-	   }
-	   else {
-	       !goto(X,Y)
+	   
+// Setting the next state according to the other agents' states.	   
++!set_next_state : carrying_gold(Capacity)
+    <-	if (Capacity > 0) {
+			-state(_);
+			.print("!!!!!!!!!!!!!!!!!!!GOING TO DEPO:");
+			+state(goto_depot);
+	   } else {
+	   		-state(_);
+			+state(goto_mine);
 	   }.
+	
+// If treasure was picked it will be removed from database of all agents.
++!cleanDB(TreasureX, TreasureY): known_gold(TreasureX, TreasureY)
+	<-  .send(aFast, achieve, remove_gold(TreasureX, TreasureY)).
+	
+// It takes care of mining.
++!goto_mine : moves_left(Moves)
+    <-  ?get_first_position(TreasureX, TreasureY);
+		.print("---------------------------------Treasure position: ", TreasureX, TreasureY);
+		if (pos(TreasureX, TreasureY)) { // If the agent is at the position where treasure is.
+			if (aSlowPos(TreasureX, TreasureY)) {
+				if (gold(TreasureX, TreasureY)) {
+					if (Moves > 1) {
+						.print("**************************************************3");
+						do(pick);
+						.print("Taking GOLD!");
+						!cleanDB(TreasureX, TreasureY);
+						!pop_first_position;
+					} else {
+						.print("**************************************************4");
+						do(skip);
+					}
+				} else {
+					.print("**************************************************5");
+					do(skip);
+				}
+			} else {
+				.print("**************************************************6");
+				do(skip);
+			}
+		} else {
+			.print("**************************************************7");
+		   !goto(TreasureX, TreasureY);
+		}.
+		
+// It performs one move. 
++!do_step : moves_left(Moves) & pos(MyX,MyY)
+      <- 
+	  	  .print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+		  .print("Moves left: ", Moves);
+	      // Inserting my new position to the friends' databases.
+		 .send(aSlow, untell, aMiddlePos(_, _));
+		 .send(aSlow, tell, aMiddlePos(MyX, MyY));
+	  
+	  	 // Set new state of the agent.
+	  	 !set_next_state;
+	  
+		 // Empty the goto plan. New position will be stored here.
+	  	 -goto_plan(_);
+		 +goto_plan([]);
 
-+!goto_depot : depot(DepX,DepY)
-    <- if (pos(DepX,DepY)) {
-	       // pokud uz je v depotu, polozi tady surovinu a jde sbirat dal
-		   do(drop)
-	   }
-	   else {
-	       !goto(X,Y)
-	   }.
-
-+!set_next_state
-    <- // pokud hleda (prohledava mapu) a uz nema nic co prohledavat, jde tezit
-	   if (all_visited & empty_goto_plan) {
-	       .print("***********************************");
-	       .print("****** TED JDU TEZIT");
-		   .print("***********************************");
-           // kdyz uz vsechno navstivil a nema nic v planu, jde sbirat suroviny
-		   -state(_);
-		   +state(harvesting);
-		   !plan_harvesting
-	   }
-	   // pokud jde do deptotu se surovinou
-	   else { if (state(going_to_depot)) {
-	       // pokud je uz v depotu a odevzdal surovinu, jde dal sbirat
-	       ?pos(X,Y);
-		   if (depot(X,Y)) {
-		       -state(_);
-			   +state(harvesting);
-			   // pokud uz nema zadnou tezbu v planu, tak ji naplanuje
-			   if (empty_goto_plan) {
-			       !plan_harvesting
-			   }
-		   }
-	   }
-	   else {
-	       -state(_);
-		   +state(searching)
-	   }}.
-
-// dela kroky dokud v danem kole muze
-+!do_step : moves_left(M) & pos(MyX,MyY)
-      <- // zaznamenam, si, kde jsem a co vidim
-         !register_visited;
-		 ?get_first_position(X,Y); .print("Mym cilem je ", X, " ", Y);
-		 // pokud jsem u cile, smazu ho z goto planu
-		 if (get_first_position(MyX,MyY)) {
-		     .print("MAZU SOLVING POSITION a SOLVING OBSTACLE");
-		     !pop_first_position;
-			 // pokud jsem obchazel prekazky, vymazu databazi
-			 !reset_solving_obstacle;
-			 .abolish(solving_position(_,_,_));
+		 if (state(goto_depot)) {
+		 	!goto_depot;
 		 }
-		 // nastavi se novy stav agenta
-	     !set_next_state;
-         // prida vsechny prekazky o kterych vi toto kolo
-         !register_obstacles;
-	     // pokud vyhledava suroviny
-         if(state(searching)) {
-             // prida vsechno zlato a drevo, o kterych vi toto kolo
-             !register_gold;
-             !register_wood;
-             // jde na dalsi naplanovanou pozici
-             !goto_next_position
-         } 
-		 else { if (state(harvesting)) {
-		     // tezi zlato / drevo - stav, kdy jde k surovine a taky kdyz ji zveda
-			 !go_harvesting
+		 else { // Agent goes to mine.
+		 	!compute_treasure_min_dist(TreasureListMinDist);
+			if (empty_list(TreasureListMinDist)) {
+				.print("**************************************************8");	
+				do(skip);
+			} else {
+				// It inserts the first nearest gold/wood position to goto plan.
+				?first(TreasureListMinDist, Position);
+				?first(Position, TargetX);
+				?second(Position, TargetY);
+				!prepend_to_goto_plan(TargetX, TargetY);
+				.send(aSlow, untell, treasureAt(_, _));
+				.send(aSlow, tell, treasureAt(TargetX, TargetY));
+				if (Moves > 0) {!goto_mine; }
+			}
 		 }
-		 else { if (state(going_to_depot)) {
-			 !goto_depot
-		 }
-		 else {
-		     // jinak nevim co mam delat.
-			 do(skip)
-		 }}}
-         // pokud muze, jde dal
-         if (M > 1) {
-             !do_step
-         }.
+		 		 
+		// It checks number of moves. 
+		?moves_left(M);
+		.print("M = ", M);
+		if (M > 0) {
+			!do_step;
+		}.
 
-// v prvnim kroku se nageneruji nenavstivene pozice
-+step(0) <- !generate_unvisited; !do_step.
-+step(X) <- .print("Step: ", X);
-            !do_step.
-			
-
+// Agent performs one step (two moves in the case of the middle agent).
++step(X) <-
+		.print("******************************** Step (middle agent): ", X);
+		!do_step.
