@@ -21,7 +21,7 @@
  *				both agent if the slow agent is not going to the depot).
  */
 
-// The status of the middle agent:
+// The status of the slow agent:
 // goto_depot: the slow agent is going to the depot
 // goto_mine: the slow agent is mining
 state(goto_mine).
@@ -114,18 +114,17 @@ empty_list([]).
 get_first_position(X,Y) :- goto_plan([H|T]) & first(H, X) & second(H, Y).
 
 // It removes the first element from the goto plan list.
-+!pop_first_position
-    <- ?goto_plan([H|T]);
-	   -goto_plan(_);
-	   +goto_plan(T).
-	   
+@a1[atomic] +!pop_first_position : goto_plan([H|T])
+    <- -+goto_plan(T).
+@a2[atomic] +!pop_first_position
+	<- +goto_plan([[16,16]]).
+
 // It adds point to the beginning of the goto plan.
-+!prepend_to_goto_plan(X,Y)
+@a3[atomic] +!prepend_to_goto_plan(X,Y)
     <- ?goto_plan(G);
 	   if (not get_first_position(X,Y)) {
 	       ?prepend([X,Y],G,GG);
-	       -goto_plan(_);
-	       +goto_plan(GG)
+	       -goto_plan(GG)
 	   }.
 
 // It checks if there is an obstacle between two points on x/y coordination.
@@ -152,24 +151,24 @@ distance(MyX,MyY,X,Y,Dist) :- distance_x_line(MyX, X, Y, Dist_Y) &
 							  .min([A,B],Dist).
 
 // It helps to change direction when the agent tries to bypass the obstacle. 
-+!change_complement_x_dir
+@a4[atomic] +!change_complement_x_dir
     <- ?complement_x_dir(none, X);
 	   ?complement_x_dir(X, CompX);
 	   -complement_x_dir(none, _);
 	   +complement_x_dir(none, CompX).
 
-+!change_complement_y_dir
+@a5[atomic] +!change_complement_y_dir
     <- ?complement_y_dir(none, Y);
 	   ?complement_y_dir(Y, CompY);
 	   -complement_y_dir(none, _);
 	   +complement_y_dir(none, CompY).
 
 // It removes the fact that the agent is bypassing an obstacle.
-+!reset_solving_obstacle <- -solving_obstacle(_,_).
+@a6[atomic] +!reset_solving_obstacle <- -solving_obstacle(_,_).
 
 // It stores how many times the agent was on this cell as a result of bypassing 
 // an obstacle. This is the way how the agent can avoid the cycles in the maze.
-+!update_solving_position : pos(PosX, PosY) 
+@a7[atomic] +!update_solving_position : pos(PosX, PosY) 
     <- if(solving_position(PosX,PosY,_)) {
 	       ?solving_position(PosX,PosY,C);
 		   -solving_position(PosX,PosY,_);
@@ -182,7 +181,7 @@ distance(MyX,MyY,X,Y,Dist) :- distance_x_line(MyX, X, Y, Dist_Y) &
 // It chooses the optimal direction for bypassing an obstacle. It is based on
 // the principle of the score of every cell on the board. It is used to avoid
 // problems that appear as a result of cycles' existence in the maze.
-+!choose_optimal_solving_dir : solving_obstacle(TargetDir, SolvingDir)
+@a8[atomic] +!choose_optimal_solving_dir : solving_obstacle(TargetDir, SolvingDir)
     <- ?solving_dir_score(TargetDir, TargetScore);
 	   ?solving_dir_score(SolvingDir, SolvingScore);
 	   ?complement_dir(TargetDir, CompTargetDir);
@@ -202,10 +201,10 @@ distance(MyX,MyY,X,Y,Dist) :- distance_x_line(MyX, X, Y, Dist_Y) &
 	   }}}}.
 	   
 // If agent is at the destination position.
-+!goto(X,Y) : pos(X,Y) <- true.
+@a9[atomic] +!goto(X,Y) : pos(X,Y) <- true.
 
 // If agent bypasses an obstacle.
-+!goto(X,Y) : solving_obstacle(TargetDir, SolvingDir) 
+@a10[atomic] +!goto(X,Y) : solving_obstacle(TargetDir, SolvingDir) 
     <- !update_solving_position; 
 	   !choose_optimal_solving_dir;
 	   ?solving_dir(D);
@@ -216,7 +215,7 @@ distance(MyX,MyY,X,Y,Dist) :- distance_x_line(MyX, X, Y, Dist_Y) &
 	   }.
 
 // If agent is going along the x-axis to its goal.
-+!goto(X,Y) : pos(MyX, MyY) & get_x_dir(MyX, X, Xdir) & not (Xdir == none)
+@a11[atomic] +!goto(X,Y) : pos(MyX, MyY) & get_x_dir(MyX, X, Xdir) & not (Xdir == none)
     <- if (possible(Xdir)) {
 	       do(Xdir)
 	   }
@@ -243,7 +242,7 @@ distance(MyX,MyY,X,Y,Dist) :- distance_x_line(MyX, X, Y, Dist_Y) &
 	   }.
 
 // If agent is going along the y-axis to its goal.
-+!goto(X,Y) : pos(MyX, MyY) & get_y_dir(MyY, Y, Ydir) & not (Ydir == none)
+@a12[atomic] +!goto(X,Y) : pos(MyX, MyY) & get_y_dir(MyY, Y, Ydir) & not (Ydir == none)
     <- if (possible(Ydir)) {
 	       do(Ydir)
 	   }
@@ -269,66 +268,91 @@ distance(MyX,MyY,X,Y,Dist) :- distance_x_line(MyX, X, Y, Dist_Y) &
 		   }
 	   }.
 
-// Agent goes to the depot.
-+!goto_depot : depot(DepX, DepY)
-    <- if (pos(DepX, DepY)) {
-		   do(drop);
+@a13[atomic] +!goto(_,_) : moves_left(Moves) & Moves > 0 <- do(skip).
+
+@a14[atomic] +!goto(_,_).
+
+// It registers visible obstacles.
+@a15[atomic] +!register_obstacles
+    <- .count(known_obstacle(A,B), ObsCount);
+	   if (ObsCount > 25) {
+	       .abolish(known_obstacle(_,_));
 	   }
-	   else {
-	       !goto(DepX,DepY);
-	   }.
+	   .findall([X,Y], obstacle(X,Y), VisibleObstacles);
+	   !register_obstacles_worker(VisibleObstacles).
 
+// It registers visible obstacles.
+@a16[atomic] +!register_obstacles_worker([]) <- true.
+@a17[atomic] +!register_obstacles_worker([H|T])
+    <- ?first(H,X); ?second(H,Y);
+	   +known_obstacle(X,Y);
+	   !register_obstacles_worker(T).
+	   
+// Agent goes to the depot.
+@a18[atomic] +!goto_depot : depot(DepX, DepY) & pos(DepX, DepY)
+    <- do(drop).
+	
+@a19[atomic] +!goto_depot : depot(DepX, DepY)
+	<- !goto(DepX,DepY).
+	
 // Setting the next state according to the other agents' states.	   
-+!set_next_state: carrying_gold(Capacity)
-    <- if (Capacity > 0) {
-			-state(_);
-	   		+state(goto_depot);
-	   } else {
-	   		-state(_);
-	   		+state(goto_mine)
-	   }.
-		
-// It takes care of mining.
-+!goto_mining
-    <-  ?treasureAt(TreasureX, TreasureY);
-		.print("Treasure position: ", TreasureX, TreasureY);
-		if (pos(TreasureX, TreasureY)) { // If the agent is at the position where treasure is.
-			if (aMiddlePos(TreasureX, TreasureY)) {
-				if (gold(TreasureX, TreasureY)) {
-					do(pick);
-					.print("Taking GOLD!");
-					-treasureAt(_, _);
-					.send(aFast, achieve, remove_gold(TreasureX, TreasureY));
-					}
-				else {
-					do(skip);
-				}
-			} else {
-				do(skip);
-			}
-		} else {
-			!goto(TreasureX, TreasureY);
-		}.	
-		  
-// It performs one move for the slow agent.
-+!do_step : pos(MyX,MyY)
-      <- // Inserting my new position to the friends' databases.
-		 .send(aMiddle, untell, aSlowPos(_, _));
-		 .send(aMiddle, tell, aSlowPos(MyX, MyY));
-		 
-		 !set_next_state;
+@a20[atomic] +!set_next_state: carrying_gold(Capacity) & Capacity > 0  
+	<- -+state(goto_depot).
+	  
+@a21[atomic] +!set_next_state: carrying_wood(Capacity) & Capacity > 0  
+	<- -+state(goto_depot).
+	  
+@a22[atomic] +!set_next_state
+	<- -+state(goto_mine).
 
-		 if (state(goto_depot)) {
-		 	!goto_depot;
-		 }
-		 else {
-		 	if (treasureAt(_,_)) {
-		 		!goto_mining;
-			} 
-			else {
-		 		do(skip);
-		}}.
+// Inserts information about a treasure.
+@a23[atomic] +!put_treasure_at(X, Y)
+	<-	-+treasureAt(X, Y).
+		
+@a24[atomic] +!goto_mine : moves_left(Moves) & treasureAt(TreasureX, TreasureY) &
+			  pos(TreasureX, TreasureY) & ally(TreasureX, TreasureY) &
+			  gold(TreasureX, TreasureY) & is(Moves,1)
+    <- 	do(pick);
+		-treasureAt(_, _).
+
+@a25[atomic] +!goto_mine : moves_left(Moves) & treasureAt(TreasureX, TreasureY) &
+			  pos(TreasureX, TreasureY) & ally(TreasureX, TreasureY) &
+			  wood(TreasureX, TreasureY) & is(Moves,1)
+    <- 	do(pick);
+		-treasureAt(_, _).
+
+@a26[atomic] +!goto_mine : moves_left(Moves) & treasureAt(TreasureX, TreasureY) &
+			  not pos(TreasureX, TreasureY) & is(Moves,1)
+    <-  !goto(TreasureX, TreasureY).
+
+@a27[atomic] +!goto_mine : treasureAt(TreasureX, TreasureY) &
+			  pos(TreasureX, TreasureY) & not gold(TreasureX, TreasureY)
+			  & not wood(TreasureX, TreasureY)
+	<-	-treasureAt(TreasureX, TreasureY);
+		do(skip).	
+	
+@a28[atomic] +!goto_mine : moves_left(Moves) & Moves > 0
+    <- 	do(skip).
+		
+@a29[atomic] +!goto_mine.
+		 
+// It performs one move for the slow agent.
+@a30[atomic] +!do_step : state(goto_depot)
+      <- !register_obstacles;
+	  	 !goto_depot;
+	  	 !set_next_state.
+
+@a31[atomic] +!do_step : state(goto_mine) & treasureAt(_, _)
+      <- !register_obstacles;
+	  	 !goto_mine;
+	  	 !set_next_state.
+		 
+@a32[atomic] +!do_step
+      <- do(skip);
+	  	 !set_next_state.
+
+@a33[atomic] +!do_step : moves_left(Moves) & Moves > 0 <- do(skip).
+@a34[atomic] +!do_step.
 
 // Agent performs one step.
-+step(X) <- .print("******************************** Step (slow agent): ", X);
-            !do_step.
++step(X) <- !do_step.
