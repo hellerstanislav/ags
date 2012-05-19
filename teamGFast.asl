@@ -1,3 +1,10 @@
+/* File: teamGMiddle.asl
+ * Authors: Daniela Duricekova, xduric00@stud.fit.vutbr.cz
+ *			Stanislav Heller, xhelle03@stud.fit.vutbr.cz
+ *			Andrej Trnkoci, xtrnko00@stud.fit.vutbr.cz
+ * Description: This file implements behaviour of the fast agent.
+ */
+
 border(X,-1).
 border(-1,Y).
 border(X,Y) :- grid_size(X,_).
@@ -27,12 +34,16 @@ solving_pos_score(X,Y,0) :- .count(solving_position(X,Y,_),0).
 solving_pos_score(X,Y,Score) :- solving_position(X,Y,Score).
 
 solving_dir_score(right,Score) :- pos(X,Y) & possible(right) & solving_pos_score(X+1,Y,Score).
+solving_dir_score(right,999) :- pos(X,Y) & possible(right).
 solving_dir_score(right,1000).
 solving_dir_score(up,Score) :- pos(X,Y) & possible(up) & solving_pos_score(X,Y-1,Score).
+solving_dir_score(up,999) :- pos(X,Y) & possible(up).
 solving_dir_score(up,1000).
 solving_dir_score(left,Score) :- pos(X,Y) & possible(left) & solving_pos_score(X-1,Y,Score).
-solving_dir_score(left, 1000).
+solving_dir_score(left,999) :- pos(X,Y) & possible(left).
+solving_dir_score(left,1000).
 solving_dir_score(down,Score) :- pos(X,Y) & possible(down) & solving_pos_score(X,Y+1,Score).
+solving_dir_score(down,999) :- pos(X,Y) & possible(down).
 solving_dir_score(down,1000).
 
 is_x_dir(left).
@@ -141,7 +152,7 @@ all_visited :- .count(unvisited(X,Y),0).
 
 // vygeneruje na zacatku vsechny nenavstivene body, ktere je nutne navstivit.
 // pravdepodobne budem generovat 3x3 nebo 2x2 sit
-@a1[atomic] +!generate_unvisited : grid_size(GX,GY)
++!generate_unvisited : grid_size(GX,GY)
     <- for ( .range(X,0,GX-1) ) {
 	       if ((X mod 2) == 0) {
 	           for ( .range(Y,0,GY-1) ) {
@@ -157,7 +168,7 @@ all_visited :- .count(unvisited(X,Y),0).
 // TODO: ROZESILANI ZNALOSTI OSTATNIM AGENTUM!
 
 // pridani vsech viditelnych prekazek do databaze znalosti agenta
-@a2[atomic] +!register_obstacles
++!register_obstacles
     <- .count(known_obstacle(A,B), ObsCount);
 	   if (ObsCount > 25) {
 	       // SPEEDUP!
@@ -166,69 +177,75 @@ all_visited :- .count(unvisited(X,Y),0).
 	   .findall([X,Y], obstacle(X,Y), VisibleObstacles);
 	   !register_obstacles_worker(VisibleObstacles).
 
-@a3[atomic] +!register_obstacles_worker([]) <- true.
-@a4[atomic] +!register_obstacles_worker([H|T])
++!register_obstacles_worker([]) <- true.
++!register_obstacles_worker([H|T])
     <- ?first(H,X); ?second(H,Y); // ziskani souradnic
 	   +known_obstacle(X,Y); -unvisited(X,Y); // zapsani prekazky do db
+	   .send(aMiddle, achieve, add_known_obstacle(X, Y));
+	   .send(aSlow, achieve, add_known_obstacle(X, Y));
 	   !register_obstacles_worker(T).
 
 // pridavani zlata
-@a5[atomic] +!register_gold
++!register_gold
     <- .findall([X,Y], gold(X,Y), VisibleGold);
 	   for ( .member(H,VisibleGold) ) {
 	       ?first(H,X); ?second(H,Y);
            if (not not_gold(X,Y)) {
-				.send(aMiddle, achieve, put_gold_at(X,Y));
+		   		+known_gold(X,Y);
+				.send(aMiddle, achieve, treasureFound(X, Y))
 		   }	       
        }.
 
 // pridavani dreva do databaze
-@a6[atomic] +!register_wood
++!register_wood
     <- .findall([X,Y], wood(X,Y), VisibleWood);
 	   for ( .member(H,VisibleWood) ) {
 	       ?first(H,X); ?second(H,Y);
 		   if (not not_wood(X,Y)) {
-				.send(aMiddle, achieve, put_wood_at(X,Y));
+           		+known_wood(X,Y);
+				.send(aMiddle, achieve, treasureFound(X, Y))
 		   }
        }.
 
-@a7[atomic] +!register_visited : pos(X,Y)
++!register_visited : pos(X,Y)
     <- -unvisited(X,Y); -unvisited(X-1,Y); -unvisited(X+1,Y);
 	    -unvisited(X,Y-1); -unvisited(X,Y+1).
+		
 ////////////////////////////////////////////////////////////////////////////////
 // PLANOVANI TRAS (pruzkum, tezba)
 ////////////////////////////////////////////////////////////////////////////////
 
-// It removes the first element from the goto plan list.
-@a8[atomic] +!pop_first_position : goto_plan([H|T])
-    <- -+goto_plan(T).
-@a9[atomic] +!pop_first_position
-	<- 		+goto_plan([[16,16]]).
+// odstrani prvni prvek z goto planu
++!pop_first_position
+    <- ?goto_plan([H|T]);
+	   -goto_plan(_);
+	   +goto_plan(T).
 
 // pomocny rekurzivni srotovac pro naplanovani vsech bodu z listu UnvisitedMinDistList
-@a10[atomic] +!plan_nearest_unvisited_worker([]) <- true.
-@a11[atomic] +!plan_nearest_unvisited_worker([H|T])
++!plan_nearest_unvisited_worker([]) <- true.
++!plan_nearest_unvisited_worker([H|T])
     <- ?first(H,X); ?second(H,Y);
 	   !plan_best_path(X,Y);
 	   !plan_nearest_unvisited_worker(T).
 	   
 // prida do planu nejblizsi nenavstivene body na mape
-@a12[atomic] +!plan_nearest_unvisited
++!plan_nearest_unvisited
     <- .findall([X,Y], unvisited(X,Y), Unvisited);
 	   ?min_distance(Unvisited,UnvisitedMinDistList);
 	   !plan_nearest_unvisited_worker(UnvisitedMinDistList).
 	   
 // prida bod na zacatek planu
-@a13[atomic] +!prepend_to_goto_plan(X,Y)
++!prepend_to_goto_plan(X,Y)
     <- ?goto_plan(G);
 	   // pokud uz neni tento bod naplanovan na zacatku, tak ho naplanuje
 	   if (not get_first_position(X,Y)) {
 	       ?prepend([X,Y],G,GG);
-	       -+goto_plan(GG)
+	       -goto_plan(_);
+	       +goto_plan(GG)
 	   }.
 
 // naplanuje do goto planu nejlepsi moznou cestu do bodu A[X,Y]
-@a14[atomic] +!plan_best_path(X,Y) : pos(MyX, MyY)
++!plan_best_path(X,Y) : pos(MyX, MyY)
     <- ?distance_x_line(MyX, X, Y, Dist_Y);
 	   ?distance_x_line(MyX, X, MyY, Dist_MyY);
 	   ?distance_y_line(MyY, Y, X, Dist_X);
@@ -262,7 +279,7 @@ all_visited :- .count(unvisited(X,Y),0).
 
 // naplanuje trasu na nejblizsi zlato
 // TODO i drevo
-@a15[atomic] +!plan_harvesting
++!plan_harvesting
     <- .findall([X,Y], known_gold(X,Y), Gold);
 	   ?min_distance(Gold,MinDistGold);
 	   for ( .member(H,MinDistGold) ) {
@@ -275,24 +292,24 @@ all_visited :- .count(unvisited(X,Y),0).
 // POHYB AGENTA - plany pro pohyb a obchazeni prekazek
 ////////////////////////////////////////////////////////////////////////////////
 // pomocny plan pro zmenu smeru, kudy priste agent bude prekazku obchazet
-@a16[atomic] +!change_complement_x_dir
++!change_complement_x_dir
     <- ?complement_x_dir(none, X);
 	   ?complement_x_dir(X, CompX);
 	   -complement_x_dir(none, _);
 	   +complement_x_dir(none, CompX).
 
-@a17[atomic] +!change_complement_y_dir
++!change_complement_y_dir
     <- ?complement_y_dir(none, Y);
 	   ?complement_y_dir(Y, CompY);
 	   -complement_y_dir(none, _);
 	   +complement_y_dir(none, CompY).
 
 // zruseni faktu, ze obchazim prekazku
-@a18[atomic] +!reset_solving_obstacle <- -solving_obstacle(_,_).
++!reset_solving_obstacle <- -solving_obstacle(_,_).
 
 // ulozeni kolikrat jsem byl na danem policku pri obchazeni prekazky
 // timto mechanismem se snazi agent vyhnout se cyklum v bludisti
-@a19[atomic] +!update_solving_position : pos(PosX, PosY) 
++!update_solving_position : pos(PosX, PosY) 
     <- if(solving_position(PosX,PosY,_)) {
 	       ?solving_position(PosX,PosY,C);
 		   -solving_position(PosX,PosY,_);
@@ -305,7 +322,7 @@ all_visited :- .count(unvisited(X,Y),0).
 // vybere optimalni smer pro obejiti prekazky. Zalozeno na principu
 // skore kazdeho pole, ktere se pocita z toho, kolikrat na danem poli pri
 // obchazeni dane prekazky byl. Timto se vyhneme problemu bludiste.
-@a20[atomic] +!choose_optimal_solving_dir : solving_obstacle(TargetDir, SolvingDir)
++!choose_optimal_solving_dir : solving_obstacle(TargetDir, SolvingDir)
     <- ?solving_dir_score(TargetDir, TargetScore);
 	   ?solving_dir_score(SolvingDir, SolvingScore);
 	   ?complement_dir(TargetDir, CompTargetDir);
@@ -325,11 +342,34 @@ all_visited :- .count(unvisited(X,Y),0).
 	   }}}}.
 	   
 // pokud uz tam jsi, nikam nechod
-@a21[atomic] +!goto(X,Y) : pos(X,Y) <- true.
++!goto(X,Y) : pos(X,Y) <- true.
+
+// If agent bypasses an obstacle around him.
++!goto(X,Y) : pos(MyX, MyY) & not possible(up) & not possible(down) & not possible(right)
+	<-  -unvisited(MyX, MyY);
+		+known_obstacle(MyX, MyY);
+		+obstacle(MyX, MyY);
+		do(left).
++!goto(X,Y) : pos(MyX, MyY) & not possible(up) & not possible(down) & not possible(left)
+	<-  -unvisited(MyX, MyY);
+		+known_obstacle(MyX, MyY);
+		+obstacle(MyX, MyY);
+		do(right).
++!goto(X,Y) : pos(MyX, MyY) & not possible(up) & not possible(left) & not possible(right)
+	<-  -unvisited(MyX, MyY);
+		+known_obstacle(MyX, MyY);
+		+obstacle(MyX, MyY);
+		do(down).
++!goto(X,Y) : pos(MyX, MyY) & not possible(down) & not possible(left) & not possible(right)
+	<-  -unvisited(MyX, MyY);
+		+known_obstacle(MyX, MyY);
+		+obstacle(MyX, MyY);
+		do(up).
 
 // obchazim prekazku
-@a22[atomic] +!goto(X,Y) : solving_obstacle(TargetDir, SolvingDir) 
++!goto(X,Y) : solving_obstacle(TargetDir, SolvingDir) 
     <- // pridani bodu do databaze solving_position
+	   //.print("SOLVING OBSTACLE");
 	   !update_solving_position; 
 	   // vybere optimalni smer do solving_dir
 	   !choose_optimal_solving_dir;
@@ -342,7 +382,7 @@ all_visited :- .count(unvisited(X,Y),0).
 	   }.
 
 // jdu normalne za cilem po x-ove ose
-@a23[atomic] +!goto(X,Y) : pos(MyX, MyY) & get_x_dir(MyX, X, Xdir) & not (Xdir == none)
++!goto(X,Y) : pos(MyX, MyY) & get_x_dir(MyX, X, Xdir) & not (Xdir == none)
     <- if (possible(Xdir)) {
 	       do(Xdir)
 	   }
@@ -369,7 +409,7 @@ all_visited :- .count(unvisited(X,Y),0).
 	   }.
 
 // jdu normalne za cilem po y-ove ose
-@a24[atomic] +!goto(X,Y) : pos(MyX, MyY) & get_y_dir(MyY, Y, Ydir) & not (Ydir == none)
++!goto(X,Y) : pos(MyX, MyY) & get_y_dir(MyY, Y, Ydir) & not (Ydir == none)
     <- if (possible(Ydir)) {
 	       do(Ydir)
 	   }
@@ -401,14 +441,16 @@ all_visited :- .count(unvisited(X,Y),0).
 
 // udela jeden krok k prvni naplanovane pozici
 // pokud nejsou zadne naplanovane pozice, jde tam, kde jeste nebyl
-@a25[atomic] +!goto_next_position
++!goto_next_position
     <- // pokud nemas prazdny plan, tak jedem
 	   if(not empty_goto_plan) {
+	       //.print("NOT EMPTY GOTO PLAN");
 	       // ziskani prvni pozice z planu, kam se ma jet
 	       ?get_first_position(X,Y);
 		   // Pokud je tam prekazka (tzn pozice byla naplanovana pred tim, nez
 		   // jsem uvidel, ze tam je prekazka), tak tam nejedu a pokracuju dal.
 		   if (known_obstacle(X,Y) | obstacle(X,Y)) {
+		       //.print("KNOWN OBSTACLE | OBSTACLCE");
 		       // odstraneni prvniho prvku v goto planu
 		       !pop_first_position;
 			   // rekurzivne se zavola sam na sebe (jede na dalsi prvek v goto planu)
@@ -423,7 +465,7 @@ all_visited :- .count(unvisited(X,Y),0).
 		   !goto_next_position
 	   }.
 
-@a26[atomic] +!go_harvesting
++!go_harvesting
     <- ?get_first_position(X,Y);
 	   if (pos(X,Y)) {
 	       // pokud uz je na miste, vezme surovinu
@@ -433,29 +475,34 @@ all_visited :- .count(unvisited(X,Y),0).
 		   // ale jinak by mel tuto pozici v planu nechat!
 		   //!pop_first_position; // oddela toto misto z planu
 		   // a predela rozhodne se jit do depotu
-		   -+state(going_to_depot)
+		   -state(_);
+		   +state(going_to_depot)
 	   }
 	   else {
 	       !goto(X,Y)
 	   }.
 
-@a27[atomic] +!goto_depot : depot(DepX,DepY)
++!goto_depot : depot(DepX,DepY)
     <- if (pos(DepX,DepY)) {
 	       // pokud uz je v depotu, polozi tady surovinu a jde sbirat dal
 		   do(drop)
 	   }
 	   else {
-	       !goto(X,Y)
+	       !goto(DepX,DepY)
 	   }.
 
-@a28[atomic] +!set_next_state
++!set_next_state
     <- // pokud hleda (prohledava mapu) a uz nema nic co prohledavat, jde tezit
 	   if (all_visited & empty_goto_plan) {
+	       //.print("***********************************");
+	       //.print("****** TED JDU TEZIT");
+		   //.print("***********************************");
            // kdyz uz vsechno navstivil a nema nic v planu, jde sbirat suroviny
-		   -+state(harvesting);
+		   -state(_);
+		   +state(harvesting);
 		   // Informing friend agents that I see the whole board.
-		   //.send(aMiddle, tell, searchingFinished);
-		   //.send(aSlow, tell, searchingFinished);
+		   .send(aMiddle, tell, searchingFinished);
+		   .send(aSlow,tell,searchingFinished);
 		   // This will nnot be used, middle agent sents me where I should go.
 		   //!plan_harvesting
 	   }
@@ -464,7 +511,8 @@ all_visited :- .count(unvisited(X,Y),0).
 	       // pokud je uz v depotu a odevzdal surovinu, jde dal sbirat
 	       ?pos(X,Y);
 		   if (depot(X,Y)) {
-			   -+state(harvesting);
+		       -state(_);
+			   +state(harvesting);
 			   // pokud uz nema zadnou tezbu v planu, tak ji naplanuje
 			   if (empty_goto_plan) {
 			       !plan_harvesting
@@ -472,16 +520,21 @@ all_visited :- .count(unvisited(X,Y),0).
 		   }
 	   }
 	   else {
-		   -+state(searching)
+	       -state(_);
+		   +state(searching)
 	   }}.
 
++!do_step : state(harvesting)
+	<- do(skip).
+	   
 // dela kroky dokud v danem kole muze
-@a29[atomic] +!do_step : moves_left(M) & pos(MyX,MyY) & M > 0
++!do_step : moves_left(M) & pos(MyX,MyY) & M > 0
       <- // zaznamenam, si, kde jsem a co vidim
          !register_visited;
 		 ?get_first_position(X,Y);
 		 // pokud jsem u cile, smazu ho z goto planu
 		 if (get_first_position(MyX,MyY)) {
+		     //.print("MAZU SOLVING POSITION a SOLVING OBSTACLE");
 		     !pop_first_position;
 			 // pokud jsem obchazel prekazky, vymazu databazi
 			 !reset_solving_obstacle;
@@ -510,20 +563,15 @@ all_visited :- .count(unvisited(X,Y),0).
 		 else {
 		     // jinak nevim co mam delat.
 			 do(skip)
-		 }}}
-         !do_step.
-		 
-@a30[atomic] +!do_step.
+		 }}}.
 
-//+!remove_obstacles
-//	<- .send(aMiddle, untell, known_obstacle(_, _));
-//	   .send(aSlow, untell, known_obstacle(_, _)).
-	   
++!do_step.
+
 +not_wood(X,Y)
 	<- -known_wood(X,Y).
 +not_gold(X,Y)
 	<- -known_gold(X,Y).
 	
 // v prvnim kroku se nageneruji nenavstivene pozice
-+step(0) <- !generate_unvisited; !do_step.
-+step(X) <- !do_step.
++step(0) <- !generate_unvisited; !do_step; !do_step; !do_step.
++step(X) <- !do_step; !do_step; !do_step.
