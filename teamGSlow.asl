@@ -408,6 +408,12 @@ min_distance_worker([H|T], MinDist, Keeper, TreasureListMinDist) :-
 	   +known_obstacle(X,Y);
 	   !register_obstacles_worker(T).
 
+get_fast_name(aFast) :- friend(aFast).
+get_fast_name(bFast) :- friend(bFast). 
+get_middle_name(aMiddle) :- friend(aMiddle).
+get_middle_name(bMiddle) :- friend(bMiddle).
+get_slow_name(aSlow) :- friend(aSlow).
+get_slow_name(bSlow) :- friend(bSlow).
 
 treasure(X, Y) :- gold(X, Y).
 treasure(X, Y) :- wood(X, Y).

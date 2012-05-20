@@ -5,6 +5,13 @@
  * Description: This file implements behaviour of the fast agent.
  */
 
+get_fast_name(aFast) :- friend(aFast).
+get_fast_name(bFast) :- friend(bFast). 
+get_middle_name(aMiddle) :- friend(aMiddle).
+get_middle_name(bMiddle) :- friend(bMiddle).
+get_slow_name(aSlow) :- friend(aSlow).
+get_slow_name(bSlow) :- friend(bSlow). 
+ 
 border(X,-1).
 border(-1,Y).
 border(X,Y) :- grid_size(X,_).
@@ -137,9 +144,9 @@ all_visited :- .count(unvisited(X,Y),0).
 // pravdepodobne budem generovat 3x3 nebo 2x2 sit
 +!generate_unvisited : grid_size(GX,GY)
     <- for ( .range(X,0,GX-1) ) {
-	       if ((X mod 2) == 0) {
+	       if (((X mod 2) == 0) | (X == GX-1)) {
 	           for ( .range(Y,0,GY-1) ) {
-		           if ((Y mod 2) == 0) { +unvisited(X,Y) }
+		           if (((Y mod 2) == 0) | (Y == GY-1)) { +unvisited(X,Y) }
 		       }
 		   }
        }.
@@ -164,8 +171,10 @@ all_visited :- .count(unvisited(X,Y),0).
 +!register_obstacles_worker([H|T])
     <- ?first(H,X); ?second(H,Y); // ziskani souradnic
 	   +known_obstacle(X,Y); -unvisited(X,Y); // zapsani prekazky do db
-	   .send(aMiddle, achieve, add_known_obstacle(X, Y));
-	   .send(aSlow, achieve, add_known_obstacle(X, Y));
+	   ?get_middle_name(MiddleName);
+	   .send(MiddleName, achieve, add_known_obstacle(X, Y));
+	   ?get_slow_name(SlowName);
+	   .send(SlowName, achieve, add_known_obstacle(X, Y));
 	   !register_obstacles_worker(T).
 
 // pridavani zlata
@@ -175,7 +184,8 @@ all_visited :- .count(unvisited(X,Y),0).
 	       ?first(H,X); ?second(H,Y);
            if (not not_gold(X,Y)) {
 		   		+known_gold(X,Y);
-				.send(aMiddle, achieve, treasureFound(X, Y))
+				?get_middle_name(MiddleName);
+				.send(MiddleName, achieve, treasureFound(X, Y))
 		   }	       
        }.
 
@@ -186,7 +196,8 @@ all_visited :- .count(unvisited(X,Y),0).
 	       ?first(H,X); ?second(H,Y);
 		   if (not not_wood(X,Y)) {
            		+known_wood(X,Y);
-				.send(aMiddle, achieve, treasureFound(X, Y))
+				?get_middle_name(MiddleName);
+				.send(MiddleName, achieve, treasureFound(X, Y))
 		   }
        }.
 
@@ -484,8 +495,10 @@ all_visited :- .count(unvisited(X,Y),0).
 		   -state(_);
 		   +state(harvesting);
 		   // Informing friend agents that I see the whole board.
-		   .send(aMiddle, tell, searchingFinished);
-		   .send(aSlow,tell,searchingFinished);
+		   ?get_middle_name(MiddleName);
+		   .send(MiddleName, tell, searchingFinished);
+		   ?get_slow_name(SlowName);
+		   .send(SlowName,tell,searchingFinished);
 		   // This will nnot be used, middle agent sents me where I should go.
 		   //!plan_harvesting
 	   }

@@ -408,7 +408,13 @@ min_distance_worker([H|T], MinDist, Keeper, TreasureListMinDist) :-
 	   +known_obstacle(X,Y);
 	   !register_obstacles_worker(T).
 
-
+get_fast_name(aFast) :- friend(aFast).
+get_fast_name(bFast) :- friend(bFast). 
+get_middle_name(aMiddle) :- friend(aMiddle).
+get_middle_name(bMiddle) :- friend(bMiddle).
+get_slow_name(aSlow) :- friend(aSlow).
+get_slow_name(bSlow) :- friend(bSlow).
+	   
 treasure(X, Y) :- gold(X, Y).
 treasure(X, Y) :- wood(X, Y).
 
@@ -428,9 +434,9 @@ treasure(X, Y) :- wood(X, Y).
 +!treasureFound(X, Y)
 	<- +knownTreasure(X, Y).
 
-+!planTreasure: knownTreasure(X, Y)
-	<-  .send(aSlow, untell, treasurePos(_, _));
-		.send(aSlow, tell, treasurePos(X, Y));
++!planTreasure: knownTreasure(X, Y) & get_slow_name(SlowName)
+	<-  .send(SlowName, untell, treasurePos(_, _));
+		.send(SlowName, tell, treasurePos(X, Y));
 		!pushPlan(X, Y).
 +!planTreasure.
 
@@ -438,8 +444,10 @@ treasure(X, Y) :- wood(X, Y).
 	<- !planTreasure; do(skip); do(skip).
 +!doStep: pos(X, Y) & plan([[X, Y]|_]) & depot(X, Y)
 	<- do(drop); !popPlan.
-+!doStep: pos(X, Y) & knownTreasure(X, Y) & plan([[X, Y]|_]) &ally(X, Y) & treasure(X, Y)
++!doStep: pos(X, Y) & knownTreasure(X, Y) & plan([[X, Y]|_]) & ally(X, Y) & treasure(X, Y)
 	<- do(pick); -knownTreasure(X, Y); !popPlan; !planDepo.
++!doStep: pos(X, Y) & knownTreasure(X, Y) & plan([[X, Y]|_]) & ally(X, Y) & not treasure(X, Y)
+	<- do(skip); do(skip); -knownTreasure(X, Y); !popPlan; !planTreasure.
 +!doStep: plan([[X, Y]|_]) & not pos(X, Y)
 	<- !goto(X, Y); do(skip).
 +!doStep <- do(skip); do(skip).
