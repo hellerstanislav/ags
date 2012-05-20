@@ -116,37 +116,20 @@ aggregated_distance(PosDist, DepDist, Dist) :- DepDist < 33 & Dist = (PosDist + 
 
 // zjisteni vsech bodu, ktere jsou aktualne od agenta nejblize
 min_distance(Unvisited,UnvisitedMinDistList) :-
-    min_distance_worker(Unvisited,1000,[],UnvisitedMinDistList).
+    min_distance_worker(Unvisited,1001,[],UnvisitedMinDistList).
 
 min_distance_worker([],_,K,K).
 
 min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
-    pos(PosX,PosY) & depot(DepX,DepY) & 
+    pos(PosX,PosY) &
 	first(H,Xtarget) & second(H,Ytarget) &
     distance(PosX,PosY,Xtarget,Ytarget,PosDist) &
-	distance(DepX,DepY,Xtarget,Ytarget,DepDist) &
-	aggregated_distance(PosDist, DepDist, Dist) &
-	Dist < MinDist &
-	min_distance_worker(T,Dist,[H],UnvisitedMinDistList).
+	PosDist < MinDist &
+	min_distance_worker(T,PosDist,[H],UnvisitedMinDistList).
 
-min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
-    pos(PosX,PosY) & depot(DepX,DepY) &
-	first(H,Xtarget) & second(H,Ytarget) &
-    distance(PosX,PosY,Xtarget,Ytarget,PosDist) &
-	distance(DepX,DepY,Xtarget,Ytarget,DepDist) &
-	aggregated_distance(PosDist, DepDist, Dist) &
-	is(Dist,MinDist) & .concat([H],Keeper,NewKeeper) & 
-	min_distance_worker(T,Dist,NewKeeper,UnvisitedMinDistList).
-
-min_distance_worker([H|T],MinDist,Keeper,UnvisitedMinDistList) :-
-    pos(PosX,PosY) & depot(DepX,DepY) &
-	first(H,Xtarget) & second(H,Ytarget) &
-    distance(PosX,PosY,Xtarget,Ytarget,PosDist) &
-	distance(DepX,DepY,Xtarget,Ytarget,DepDist) &
-	aggregated_distance(PosDist, DepDist, Dist) &
-	Dist > MinDist &
+min_distance_worker([_|T],MinDist,Keeper,UnvisitedMinDistList) :- 	
 	min_distance_worker(T,MinDist,Keeper,UnvisitedMinDistList).
-
+	
 // vsechna mista na mape uz byla navstivena
 all_visited :- .count(unvisited(X,Y),0).
 
